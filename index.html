@@ -1,0 +1,902 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ستوديو مدونة - جدول الصدارة</title>
+
+    <!-- Google Fonts: Rubik -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;700;900&display=swap" rel="stylesheet">
+
+    <!-- Tailwind Cached CSS -->
+    <link href="./style.css" rel="stylesheet">
+    
+    <!-- Confetti -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+    <!-- React & ReactDOM -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <!-- Babel -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</head>
+
+<body class="min-h-screen antialiased overflow-x-hidden selection:bg-spanish selection:text-white pb-10">
+    <div id="root"></div>
+
+    <!-- Modular Firebase SDK Setup -->
+    <script type="module">
+        import { initializeApp, getApp, getApps } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-app.js";
+        import { getDatabase, ref, onValue, set, get, push, remove, serverTimestamp, query, limitToLast, orderByChild } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-database.js";
+
+        window.firebaseModular = {
+            initializeApp, getApp, getApps, getDatabase, ref, onValue, set, get, push, remove, serverTimestamp, query, limitToLast, orderByChild
+        };
+        window.dispatchEvent(new Event('firebaseReady'));
+    </script>
+
+    <!-- React App logic -->
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyDVNQ5Nh8JpaOZIb6bhou6x2JAvjn8Ik4U",
+            authDomain: "mdwnhpoints.firebaseapp.com",
+            databaseURL: "https://mdwnhpoints-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "mdwnhpoints",
+            storageBucket: "mdwnhpoints.firebasestorage.app",
+            messagingSenderId: "225704093916",
+            appId: "1:225704093916:web:a1455885c84101b6b02c19",
+            measurementId: "G-23C0KNL9VM"
+        };
+
+        const MEMBERS = [
+            "اسيل", "الشعيرة", "جمانة", "خالد حسن", "خالد", "رجب", "سحاب", "سعيد", "شارد", "شفق", "طه", "عاصم", "عبدالرحمن بندر", "علي مجدي", "عمر", "فرات", "مايتو", "محمد سمير", "مصطفى", "ملك", "منة", "مورو", "نجود", "ورقاء", "يوسف"
+        ];
+
+        // Premium Audio System for Rewards
+        const playPointAudio = (points) => {
+            try {
+                let soundNum = "1";
+                if (points === 10) soundNum = "2";
+                if (points === 20) soundNum = "3";
+                if (points === 30) soundNum = "4";
+                
+                const audio = new Audio(`./sounds/${soundNum}.mp3`);
+                audio.volume = 0.5;
+                audio.play().catch(err => console.error("Audio error:", err));
+            } catch (e) {
+                console.error("Audio system error:", e);
+            }
+        };
+
+        const triggerConfetti = (points) => {
+            const count = points === 5 ? 40 : points === 10 ? 80 : points === 20 ? 150 : 300;
+            const spread = points === 5 ? 45 : points === 10 ? 70 : points === 20 ? 100 : 160;
+            const colors = ['#f4c82b', '#f04e3a', '#3bb9ab', '#086fb6', '#faf9f7'];
+            confetti({
+                particleCount: count,
+                spread: spread,
+                origin: { y: 0.6 },
+                colors: colors,
+                disableForReducedMotion: true
+            });
+        };
+
+        function App() {
+            const [db, setDb] = useState(null);
+            const [dbError, setDbError] = useState(null);
+
+            useEffect(() => {
+                const initFb = () => {
+                    if (window.firebaseModular && !db) {
+                        try {
+                            const { initializeApp, getApp, getApps, getDatabase } = window.firebaseModular;
+                            const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
+                            setDb(getDatabase(app));
+                        } catch (e) {
+                            setDbError(e.message);
+                        }
+                    }
+                };
+                if (window.firebaseModular) initFb();
+                else window.addEventListener('firebaseReady', initFb);
+                return () => window.removeEventListener('firebaseReady', initFb);
+            }, [db]);
+
+            if (dbError) {
+                return <div className="p-10 text-center text-carmine font-bold text-xl">حدث خطأ: {dbError}</div>;
+            }
+
+            if (!db) {
+                return (
+                    <div className="flex h-screen items-center justify-center">
+                        <div className="loader !w-16 !h-16 !border-4 !border-spanish"></div>
+                    </div>
+                );
+            }
+            return <Game db={db} />;
+        }
+
+        function Game({ db }) {
+            const { ref, onValue, set, get, push, remove, serverTimestamp } = window.firebaseModular;
+
+            const [currentUser, setCurrentUser] = useState(() => localStorage.getItem("mdwnh_user") || null);
+            const [targetUser, setTargetUser] = useState(null);
+            const [players, setPlayers] = useState([]);
+
+            const [isAddingPoints, setIsAddingPoints] = useState(false);
+            const [addingPointsLabel, setAddingPointsLabel] = useState(null);
+            const [manualTargetPoints, setManualTargetPoints] = useState("");
+            const [achievementNote, setAchievementNote] = useState("");
+            const [historyLogs, setHistoryLogs] = useState([]);
+
+            const [showJournalModal, setShowJournalModal] = useState(false);
+            const [journalNote, setJournalNote] = useState("");
+            const [journalDate, setJournalDate] = useState("");
+            const [isAddingJournal, setIsAddingJournal] = useState(false);
+            const [editingJournalId, setEditingJournalId] = useState(null);
+            const [historyFilterUser, setHistoryFilterUser] = useState("ALL");
+            const [hideJournals, setHideJournals] = useState(false);
+            const [celebration, setCelebration] = useState(null);
+            const [isCelebrationClosing, setIsCelebrationClosing] = useState(false);
+
+            const [toast, setToast] = useState(null);
+            const [dbError, setDbError] = useState(null);
+
+            const [adminMode, setAdminMode] = useState(false);
+            const [passwordInput, setPasswordInput] = useState("");
+            const [showPasswordPrompt, setShowPasswordPrompt] = useState(false);
+
+            useEffect(() => {
+                const playersRef = ref(db, 'players');
+                const unsubscribe = onValue(playersRef, (snapshot) => {
+                    setDbError(null);
+                    const data = snapshot.val() || {};
+                    const parsedPlayers = Object.entries(data).map(([name, info]) => ({
+                        name,
+                        points: info.totalPoints || 0
+                    })).sort((a, b) => b.points - a.points);
+                    setPlayers(parsedPlayers);
+                }, (error) => {
+                    setDbError(error.message);
+                });
+                
+                const historyRef = ref(db, 'history');
+                const hUnsubscribe = onValue(historyRef, (snapshot) => {
+                    const data = snapshot.val() || {};
+                    const parsedHistory = Object.entries(data).map(([id, info]) => ({
+                        id,
+                        ...info
+                    })).sort((a, b) => b.timestamp - a.timestamp);
+                    setHistoryLogs(parsedHistory.slice(0, 50));
+                });
+                
+                return () => { unsubscribe(); hUnsubscribe(); };
+            }, [db]);
+
+            const selectUser = (name) => {
+                setCurrentUser(name);
+                localStorage.setItem("mdwnh_user", name);
+            };
+
+            const logout = () => {
+                setCurrentUser(null);
+                setAdminMode(false);
+                setTargetUser(null);
+                localStorage.removeItem("mdwnh_user");
+            };
+
+            const attemptAdminLogin = (e) => {
+                e.preventDefault();
+                if (passwordInput === "144noon") {
+                    setAdminMode(true);
+                    setShowPasswordPrompt(false);
+                    setPasswordInput("");
+                } else {
+                    alert("كلمة المرور غير صحيحة!");
+                }
+            };
+
+            const performAddPoints = async (amount, person) => {
+                setIsAddingPoints(true);
+                setAddingPointsLabel(amount);
+                await new Promise(resolve => setTimeout(resolve, 300));
+
+                try {
+                    const playerRef = ref(db, `players/${person}`);
+                    const snapshot = await get(playerRef);
+                    const currentData = snapshot.val() || { totalPoints: 0 };
+
+                    await set(playerRef, {
+                        totalPoints: currentData.totalPoints + amount,
+                        lastUpdated: serverTimestamp()
+                    });
+
+                    const historyDbRef = ref(db, 'history');
+                    await push(historyDbRef, {
+                        user: person,
+                        amount: amount,
+                        note: achievementNote,
+                        timestamp: Date.now()
+                    });
+
+                    playPointAudio(amount);
+                    if (!adminMode && amount === 30) {
+                        setTimeout(() => {
+                            setCelebration({ user: person, points: 30 });
+                            setIsCelebrationClosing(false);
+                            triggerConfetti(amount);
+                            
+                            // Start fade-out slightly before clearing
+                            setTimeout(() => setIsCelebrationClosing(true), 5200); // 5.2s Fade-out start
+                            setTimeout(() => setCelebration(null), 6000); // 6s State clear
+                        }, 700); // 0.7s Dramatic delay
+                    } else {
+                        triggerConfetti(amount);
+                    }
+
+                    setToast("شكرًا على عملكم المتقن!");
+                    setTimeout(() => setToast(null), 3500);
+                    setAchievementNote("");
+
+                } catch (error) {
+                    alert("تعذر إضافة النقاط. " + error.message);
+                } finally {
+                    setIsAddingPoints(false);
+                    setAddingPointsLabel(null);
+                }
+            };
+
+            const performSaveJournal = async () => {
+                if (!journalNote.trim() || !journalDate) return;
+                setIsAddingJournal(true);
+                try {
+                    const timestamp = new Date(journalDate).getTime();
+                    const entryData = {
+                        user: currentUser,
+                        amount: 0,
+                        note: journalNote,
+                        timestamp: timestamp,
+                        isJournal: true
+                    };
+
+                    const isUpdating = !!editingJournalId;
+                    if (editingJournalId) {
+                        const journalRef = ref(db, 'history/' + editingJournalId);
+                        await set(journalRef, entryData);
+                        setEditingJournalId(null);
+                    } else {
+                        const historyDbRef = ref(db, 'history');
+                        await push(historyDbRef, entryData);
+                    }
+                    
+                    setJournalNote("");
+                    setJournalDate("");
+                    setToast(isUpdating ? "تم تحديث العمل بنجاح!" : "تم تسجيل العمل بنجاح!");
+                    setTimeout(() => setToast(null), 3500);
+                } catch (error) {
+                    alert("تعذر حفظ العمل. " + error.message);
+                } finally {
+                    setIsAddingJournal(false);
+                }
+            };
+
+            const startEditingJournal = (log) => {
+                setEditingJournalId(log.id);
+                setJournalNote(log.note || "");
+                // Format date for datetime-local (YYYY-MM-DDTHH:MM)
+                const d = new Date(log.timestamp);
+                const offset = d.getTimezoneOffset() * 60000;
+                const localISODate = new Date(d - offset).toISOString().slice(0, 16);
+                setJournalDate(localISODate);
+            };
+
+            const performDeleteJournal = async (id) => {
+                if (!confirm("هل أنت متأكد من رغبتك في حذف هذا العمل؟")) return;
+                try {
+                    const journalRef = ref(db, 'history/' + id);
+                    await remove(journalRef);
+                    setToast("تم حذف العمل بنجاح!");
+                    setTimeout(() => setToast(null), 3500);
+                } catch (error) {
+                    alert("تعذر حذف العمل. " + error.message);
+                }
+            };
+
+            const performAdminDeleteHistoryEntry = async (log) => {
+                if (!confirm(`هل أنت متأكد من حذف هذا الإنجاز لـ ${log.user}؟ سيتم خصم ${log.amount} نقطة من رصيده.`)) return;
+                try {
+                    // 1. Update Player Score
+                    const playerRef = ref(db, `players/${log.user}/totalPoints`);
+                    const snapshot = await get(playerRef);
+                    const currentPoints = snapshot.val() || 0;
+                    await set(playerRef, Math.max(0, currentPoints - log.amount));
+
+                    // 2. Remove History Entry
+                    const historyRef = ref(db, `history/${log.id}`);
+                    await remove(historyRef);
+
+                    setToast("تم حذف الإنجاز وتحديث الرصيد!");
+                    setTimeout(() => setToast(null), 3500);
+                } catch (error) {
+                    alert("خطأ في الحذف: " + error.message);
+                }
+            };
+
+            const performAdminEditHistoryPoints = async (log) => {
+                const newPointsStr = prompt(`تعديل نقاط ${log.user}\nالنقاط الحالية: ${log.amount}\nأدخل النقاط الجديدة:`, log.amount);
+                if (newPointsStr === null) return;
+                const newPoints = parseInt(newPointsStr);
+                if (isNaN(newPoints)) return alert("يرجى إدخال رقم صحيح.");
+
+                try {
+                    const diff = newPoints - log.amount;
+
+                    // 1. Update Player Score
+                    const playerRef = ref(db, `players/${log.user}/totalPoints`);
+                    const snapshot = await get(playerRef);
+                    const currentPoints = snapshot.val() || 0;
+                    await set(playerRef, Math.max(0, currentPoints + diff));
+
+                    // 2. Update History Entry
+                    const historyRef = ref(db, `history/${log.id}/amount`);
+                    await set(historyRef, newPoints);
+
+                    setToast("تم تعديل النقاط وتحديث الرصيد!");
+                    setTimeout(() => setToast(null), 3500);
+                } catch (error) {
+                    alert("خطأ في التعديل: " + error.message);
+                }
+            };
+
+            const performSetPoints = async (person) => {
+                if (manualTargetPoints === "" || isNaN(manualTargetPoints)) return;
+                setIsAddingPoints(true);
+                setAddingPointsLabel('SET');
+
+                try {
+                    const playerRef = ref(db, `players/${person}`);
+                    await set(playerRef, {
+                        totalPoints: parseInt(manualTargetPoints, 10),
+                        lastUpdated: serverTimestamp()
+                    });
+
+                    playSynthSound(30);
+                    setToast("تم تعيين النقاط بنجاح!");
+                    setTimeout(() => setToast(null), 3500);
+                    setManualTargetPoints("");
+
+                } catch (error) {
+                    alert("خطأ: " + error.message);
+                } finally {
+                    setIsAddingPoints(false);
+                    setAddingPointsLabel(null);
+                }
+            };
+
+            const addPoints = (amount) => {
+                const person = adminMode && targetUser ? targetUser : currentUser;
+                if (!person) return;
+                performAddPoints(amount, person);
+            };
+
+            const BrandGradientOutline = ({ children }) => (
+                <div className="relative p-[6px] rounded-full overflow-hidden group">
+                    <div 
+                        className="absolute inset-0 animate-[spin_4s_linear_infinite]"
+                        style={{
+                            background: 'conic-gradient(from 0deg, #F4C82B, #F04E3A, #F4C82B, #086FB6, #1FA8A1, #F4C82B)',
+                            backgroundSize: '200% 200%'
+                        }}
+                    ></div>
+                    <div className="relative bg-darker rounded-full p-1">
+                        {children}
+                    </div>
+                </div>
+            );
+
+            const top3 = players.slice(0, 3);
+            const activeActionUser = adminMode ? (targetUser || "اختر عضواً") : currentUser;
+
+            return (
+                <div className="relative min-h-screen">
+                    <div className={`transition-all duration-500 ${showJournalModal ? 'blur-md scale-[0.98] opacity-30 pointer-events-none' : ''}`}>
+                        {/* Animated Blob Gradients matching Brand Colors */}
+                    <div className="fixed inset-0 overflow-hidden pointer-events-none z-[-1] opacity-50 mix-blend-screen">
+                        <div className="absolute w-[600px] h-[600px] rounded-full bg-saffron/20 blur-3xl -top-40 -left-20 animate-blob1"></div>
+                        <div className="absolute w-[500px] h-[500px] rounded-full bg-verdigris/20 blur-3xl top-40 -right-20 animate-blob2"></div>
+                        <div className="absolute w-[700px] h-[700px] rounded-full bg-carmine/20 blur-3xl -bottom-40 left-40 animate-blob3"></div>
+                        <div className="absolute w-[600px] h-[600px] rounded-full bg-spanish/20 blur-3xl bottom-10 right-20 animate-blob4"></div>
+                    </div>
+
+                    {/* Centered Toast */}
+                    {toast && (
+                        <div className="fixed bottom-10 inset-x-0 mx-auto w-max z-50 flex justify-center toast-anim">
+                            <div className="bg-darker text-snow font-bold px-8 py-4 rounded-full shadow-[0_10px_40px_rgba(8,111,182,0.4)] border border-snow/10 flex items-center gap-3 text-lg">
+                                <span>🎉</span>
+                                {toast}
+                            </div>
+                        </div>
+                    )}
+
+                    {(!currentUser && !adminMode && !showPasswordPrompt) && (
+                        <>
+                            {/* specific login bg */}
+                            <div className="fixed inset-0 z-[-2] opacity-10 bg-cover bg-center" style={{ backgroundImage: "url('./BG.jpg')" }}></div>
+
+                            <div className="max-w-4xl mx-auto p-6 pt-16 flex flex-col items-center">
+                                <div className="mb-12 drop-shadow-2xl">
+                                    <img src="./Logo.png" alt="ستوديو مدونة" className="h-20 sm:h-24 object-contain" style={{ filter: "brightness(0) invert(1)" }} />
+                                </div>
+                                <div className="w-full text-center mb-8">
+                                    <h2 className="text-2xl font-black text-saffron drop-shadow-md">اختر أسمك</h2>
+                                    <p className="text-snow/70 mt-2 text-sm">شگرا لاعمالكم الرئعة</p>
+                                </div>
+
+                                <div className="flex flex-wrap justify-center gap-4 sm:gap-5 max-w-2xl mx-auto mt-2">
+                                    {MEMBERS.map((name) => (
+                                        <button
+                                            key={name}
+                                            onClick={() => selectUser(name)}
+                                            className="group flex flex-col items-center gap-2 transition-transform hover:-translate-y-1 active:scale-95"
+                                        >
+                                            <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full border-[3px] border-darker bg-darker overflow-hidden group-hover:border-spanish transition-colors shadow-lg">
+                                                <img src={`./MdwnhMembers/${name}.png`} alt={name} className="w-full h-full object-cover" onError={(e) => { e.target.src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><rect fill="%23262626" width="100" height="100"/><text x="50" y="55" font-family="sans-serif" font-size="40" text-anchor="middle" fill="%23faf9f7">?</text></svg>' }} />
+                                            </div>
+                                            <span className="text-snow font-bold text-sm tracking-wide bg-darker/80 px-4 py-1.5 rounded-full group-hover:bg-spanish transition-colors">
+                                                {name}
+                                            </span>
+                                        </button>
+                                    ))}
+                                </div>
+
+                                <button onClick={() => setShowPasswordPrompt(true)} className="mt-20 text-xs text-snow/30 hover:text-snow/80 transition-colors select-none">
+                                    خيارات القائد
+                                </button>
+                            </div>
+                        </>
+                    )}
+
+                    {showPasswordPrompt && (
+                        <div className="max-w-md mx-auto mt-32 p-8 glass-panel text-center">
+                            <h2 className="text-2xl font-bold text-snow mb-6">لوحة تحكم القائد</h2>
+                            <form onSubmit={attemptAdminLogin} className="flex flex-col gap-4">
+                                <input
+                                    type="password"
+                                    placeholder="كلمة المرور"
+                                    value={passwordInput}
+                                    onChange={(e) => setPasswordInput(e.target.value)}
+                                    className="px-4 py-3 rounded-xl bg-darker border border-snow/10 text-snow focus:outline-none focus:border-saffron text-center text-lg"
+                                    autoFocus
+                                />
+                                <div className="flex gap-4">
+                                    <button type="button" onClick={() => setShowPasswordPrompt(false)} className="flex-1 px-4 py-3 bg-darker hover:bg-raisin rounded-xl text-snow font-bold transition">إلغاء</button>
+                                    <button type="submit" className="flex-1 px-4 py-3 bg-spanish hover:bg-blue-600 rounded-xl text-snow font-bold transition shadow-lg">تأكيد</button>
+                                </div>
+                            </form>
+                        </div>
+                    )}
+
+                    {(currentUser || adminMode) && !showPasswordPrompt && (
+                        <div className="max-w-5xl mx-auto p-4 md:p-8 pt-6 space-y-8">
+
+                            <header className="flex flex-col md:flex-row justify-between items-center gap-4 glass-panel px-8 py-4">
+                                <div className="flex items-center gap-4">
+                                    {adminMode ? (
+                                        <div className="text-saffron font-black text-2xl flex items-center gap-3">
+                                            <span className="text-3xl text-carmine drop-shadow-lg">👑</span>
+                                            رؤية القائد
+                                        </div>
+                                    ) : (
+                                        <div className="flex items-center gap-4">
+                                            <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full border-2 border-verdigris overflow-hidden bg-raisin">
+                                                <img src={`./MdwnhMembers/${currentUser}.png`} alt={currentUser} className="w-full h-full object-cover" />
+                                            </div>
+                                            <div>
+                                                <p className="text-snow/60 text-sm">مرحباً بك،</p>
+                                                <h1 className="text-2xl font-black text-snow drop-shadow-md">{currentUser}</h1>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                                <div className="flex flex-wrap gap-2 justify-end">
+                                    {!adminMode && (
+                                        <button onClick={() => setShowJournalModal(true)} className="px-5 py-2 bg-darker text-saffron border border-saffron/30 hover:bg-saffron hover:text-darker hover:shadow-[0_0_20px_rgba(244,200,43,0.5)] rounded-full font-bold transition-all duration-300 text-sm shadow-[0_0_10px_rgba(244,200,43,0.2)]">
+                                            أعمالي السابقة
+                                        </button>
+                                    )}
+                                    <button onClick={logout} className="px-5 py-2 bg-darker hover:bg-carmine text-snow rounded-full font-bold transition-colors text-sm shadow-md">
+                                        تسجيل الخروج
+                                    </button>
+                                </div>
+                            </header>
+
+                            {/* Stacked Layout: Adding Points Panel */}
+                            <div className="glass-panel p-6 sm:p-10">
+                                {adminMode && (
+                                    <div className="mb-8 p-6 bg-darker/50 rounded-2xl border border-snow/5">
+                                        <h2 className="text-xl font-bold mb-4 text-saffron flex items-center gap-2">
+                                            إدارة الأعضاء (صلاحية القائد)
+                                        </h2>
+                                        <div className="flex flex-col md:flex-row gap-4">
+                                            <select
+                                                value={targetUser || ""}
+                                                onChange={(e) => setTargetUser(e.target.value)}
+                                                className="flex-1 bg-darker text-snow border border-snow/10 rounded-xl px-4 py-4 focus:outline-none focus:border-spanish font-bold text-lg appearance-none cursor-pointer"
+                                            >
+                                                <option value="" disabled>اختر العضو...</option>
+                                                {MEMBERS.map(name => (
+                                                    <option key={name} value={name}>{name}</option>
+                                                ))}
+                                            </select>
+
+                                            <div className="flex gap-2">
+                                                <input
+                                                    type="number"
+                                                    placeholder="تعيين مجموع النقاط"
+                                                    value={manualTargetPoints}
+                                                    onChange={(e) => setManualTargetPoints(e.target.value)}
+                                                    className="w-40 bg-darker border border-snow/10 rounded-xl px-4 py-4 text-snow font-bold focus:outline-none focus:border-carmine text-center"
+                                                />
+                                                <button
+                                                    onClick={() => performSetPoints(activeActionUser)}
+                                                    disabled={!targetUser || manualTargetPoints === "" || isAddingPoints}
+                                                    className="px-6 py-4 bg-carmine hover:bg-red-500 disabled:bg-darker disabled:text-snow/30 text-snow font-bold rounded-xl transition shadow-lg whitespace-nowrap"
+                                                >
+                                                    {isAddingPoints && addingPointsLabel === 'SET' ? <div className="loader"></div> : 'تعيين'}
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                <div className={`transform transition-opacity ${adminMode && !targetUser ? 'opacity-50 pointer-events-none' : 'opacity-100'}`}>
+                                    <div className="text-center mb-6">
+                                        <h2 className="text-3xl font-black text-snow mb-2 drop-shadow-md">تسجيل الإنجازات</h2>
+                                        <p className="text-snow/70 pb-2">تتم إضافة النقاط إلى: <strong className="text-verdigris font-black text-lg">{activeActionUser}</strong></p>
+                                    </div>
+
+                                    <div className="max-w-2xl mx-auto mb-8">
+                                        <input 
+                                            type="text" 
+                                            placeholder="ما هو الإنجاز أو المشروع الذي عملت عليه؟ *"
+                                            value={achievementNote}
+                                            onChange={(e) => setAchievementNote(e.target.value)}
+                                            className="w-full bg-darker/80 border-2 border-snow/10 focus:border-spanish focus:outline-none rounded-2xl px-6 py-4 text-snow font-bold text-center placeholder-snow/40 shadow-inner transition-colors text-lg"
+                                        />
+                                    </div>
+
+                                    <div className={`grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto transition-all duration-500 ${achievementNote.trim().length === 0 ? 'grayscale opacity-50' : ''}`}>
+                                        <button
+                                            disabled={isAddingPoints || achievementNote.trim().length === 0} onClick={() => addPoints(5)}
+                                            className="relative overflow-hidden py-8 rounded-2xl font-black text-3xl md:text-4xl transition-all shadow-lg text-snow flex items-center justify-center bg-verdigris hover:-translate-y-2 hover:shadow-[0_10px_30px_rgba(59,185,171,0.5)] active:scale-95 disabled:opacity-75 disabled:hover:translate-y-0 disabled:hover:shadow-none"
+                                        >
+                                            {isAddingPoints && addingPointsLabel === 5 ? <div className="loader"></div> : '+5'}
+                                        </button>
+                                        <button
+                                            disabled={isAddingPoints || achievementNote.trim().length === 0} onClick={() => addPoints(10)}
+                                            className="relative overflow-hidden py-8 rounded-2xl font-black text-3xl md:text-4xl transition-all shadow-lg text-raisin flex items-center justify-center bg-saffron hover:-translate-y-2 hover:shadow-[0_10px_30px_rgba(244,200,43,0.5)] active:scale-95 disabled:opacity-75 disabled:hover:translate-y-0 disabled:hover:shadow-none"
+                                        >
+                                            {isAddingPoints && addingPointsLabel === 10 ? <div className="loader !border-raisin !border-t-snow"></div> : '+10'}
+                                        </button>
+                                        <button
+                                            disabled={isAddingPoints || achievementNote.trim().length === 0} onClick={() => addPoints(20)}
+                                            className="relative overflow-hidden py-8 rounded-2xl font-black text-3xl md:text-4xl transition-all shadow-lg text-snow flex items-center justify-center bg-carmine hover:-translate-y-2 hover:shadow-[0_10px_30px_rgba(240,78,58,0.5)] active:scale-95 disabled:opacity-75 disabled:hover:translate-y-0 disabled:hover:shadow-none"
+                                        >
+                                            {isAddingPoints && addingPointsLabel === 20 ? <div className="loader"></div> : '+20'}
+                                        </button>
+                                        <button
+                                            disabled={isAddingPoints || achievementNote.trim().length === 0} onClick={() => addPoints(30)}
+                                            className="relative overflow-hidden py-8 rounded-2xl font-black text-3xl md:text-4xl transition-all shadow-lg text-snow flex items-center justify-center bg-spanish hover:-translate-y-2 hover:shadow-[0_10px_30px_rgba(8,111,182,0.5)] active:scale-95 disabled:opacity-75 disabled:hover:translate-y-0 disabled:hover:shadow-none"
+                                        >
+                                            {isAddingPoints && addingPointsLabel === 30 ? <div className="loader"></div> : '+30'}
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Dashboard Boards */}
+                            <div className={adminMode ? "grid grid-cols-1 md:grid-cols-2 gap-8 max-w-7xl mx-auto mb-8" : "glass-panel p-6 sm:p-10 mb-8 max-w-5xl mx-auto"}>
+                                
+                                {/* Right Side: Leaderboard */}
+                                <div className={adminMode ? "glass-panel p-6 sm:p-10" : ""}>
+                                    <h2 className="text-3xl font-black mb-10 text-center text-snow drop-shadow-md">
+                                        🏆 المتميزون 🏆
+                                    </h2>
+
+                                    <div className="space-y-4 max-w-4xl mx-auto">
+                                        {players.length === 0 ? (
+                                            <div className="text-center text-snow/50 py-10 font-bold">لا يوجد نقاط مسجلة بعد...</div>
+                                        ) : (
+                                            players.map((p, index) => {
+                                                let medal = null;
+                                                let glow = '';
+                                                if (index === 0) { medal = '🥇'; glow = 'shadow-[0_0_20px_rgba(244,200,43,0.3)] border-saffron/50'; }
+                                                else if (index === 1) { medal = '🥈'; glow = 'shadow-[0_0_15px_rgba(250,249,247,0.2)] border-snow/30'; }
+                                                else if (index === 2) { medal = '🥉'; glow = 'shadow-[0_0_10px_rgba(240,78,58,0.2)] border-carmine/30'; }
+                                                else { glow = 'border-snow/5'; medal = <span className="text-snow/30 text-xl font-black px-2">{index + 1}</span>; }
+
+                                                return (
+                                                    <div key={p.name} className={`flex items-center justify-between p-4 rounded-2xl bg-darker/60 border-2 transition-transform hover:scale-[1.02] ${glow}`}>
+                                                        <div className="flex items-center gap-4">
+                                                            <div className="text-4xl w-10 text-center drop-shadow-lg">{medal}</div>
+                                                            <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full overflow-hidden border-2 border-darker bg-raisin shrink-0">
+                                                                <img src={`./MdwnhMembers/${p.name}.png`} alt={p.name} className="w-full h-full object-cover" />
+                                                            </div>
+                                                            <span className="font-bold text-xl sm:text-2xl text-snow drop-shadow-sm">{p.name}</span>
+                                                        </div>
+                                                        <div className="text-4xl font-black bg-clip-text text-transparent bg-gradient-to-l from-saffron to-verdigris pr-6 drop-shadow-lg">
+                                                            {p.points}
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Left Side: History (Admin Only) */}
+                                {adminMode && (() => {
+                                    const displayedHistory = historyLogs.filter(log => (historyFilterUser === "ALL" || log.user === historyFilterUser) && (!hideJournals || log.amount > 0));
+                                    return (
+                                    <div className="glass-panel p-6 sm:p-10 flex flex-col h-full">
+                                        <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mb-10">
+                                            <h2 className="text-3xl font-black text-center text-snow drop-shadow-md shrink-0">
+                                                📝 سجل الإنجازات
+                                            </h2>
+                                            <div className="flex flex-wrap gap-2 justify-center sm:justify-end w-full sm:w-auto">
+                                                <button 
+                                                    onClick={() => setHideJournals(!hideJournals)}
+                                                    className={`px-4 py-2 rounded-xl border text-sm font-bold transition-all duration-300 shadow-md flex items-center gap-2 ${hideJournals ? 'bg-carmine text-snow border-carmine shadow-[0_0_15px_rgba(240,78,58,0.3)]' : 'bg-darker/60 text-snow border-snow/30 hover:border-saffron hover:text-saffron shadow-inner'}`}
+                                                >
+                                                    <span className={`w-3 h-3 rounded-full ${hideJournals ? 'bg-snow' : 'bg-snow/20'}`}></span>
+                                                    {hideJournals ? 'إظهار السجلات' : 'إخفاء السجلات'}
+                                                </button>
+                                                <select
+                                                    value={historyFilterUser}
+                                                    onChange={(e) => setHistoryFilterUser(e.target.value)}
+                                                    className="bg-darker/60 text-snow border border-snow/10 rounded-xl px-4 py-2 focus:outline-none focus:border-saffron font-bold text-sm w-full sm:w-auto shadow-inner"
+                                                >
+                                                    <option value="ALL">عرض الكل</option>
+                                                    {MEMBERS.map(name => (
+                                                        <option key={name} value={name}>{name}</option>
+                                                    ))}
+                                                </select>
+                                            </div>
+                                        </div>
+                                        
+                                        <div className="space-y-4">
+                                            {displayedHistory.length === 0 ? (
+                                                <div className="text-center text-snow/50 py-10 font-bold">لا يوجد إنجازات مسجلة بعد...</div>
+                                            ) : (
+                                                displayedHistory.map((log) => (
+                                                    <div key={log.id} className="flex gap-4 p-4 rounded-2xl bg-darker/60 border border-snow/5 hover:border-spanish/30 transition-colors">
+                                                        <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full overflow-hidden border border-snow/10 bg-raisin shrink-0">
+                                                            <img src={`./MdwnhMembers/${log.user}.png`} alt={log.user} className="w-full h-full object-cover" />
+                                                        </div>
+                                                        <div className="flex-1">
+                                                            <div className="flex justify-between items-start mb-1">
+                                                                <span className="font-bold text-lg text-snow">{log.user}</span>
+                                                                <span className="text-xs text-snow/40 bg-darker px-2 py-1 rounded-full whitespace-nowrap">
+                                                                    {new Date(log.timestamp).toLocaleString('ar-EG', {month: 'short', day: 'numeric', hour: '2-digit', minute:'2-digit'})}
+                                                                </span>
+                                                            </div>
+                                                            <p className="text-snow/80 text-sm leading-tight mb-2">
+                                                                {log.note || <span className="italic text-snow/30">بدون ملاحظة</span>}
+                                                            </p>
+                                                            <div className="flex items-center justify-between gap-2">
+                                                                {log.amount > 0 ? (
+                                                                    <div className="inline-block bg-spanish text-snow font-black text-sm px-2 py-0.5 rounded shadow">
+                                                                        +{log.amount} نقطة
+                                                                    </div>
+                                                                ) : (
+                                                                    <div className="inline-block bg-carmine/20 border border-carmine text-carmine font-black text-sm px-2 py-0.5 rounded shadow">
+                                                                        سجل
+                                                                    </div>
+                                                                )}
+                                                                <div className="flex items-center gap-1">
+                                                                    <button 
+                                                                        onClick={() => performAdminEditHistoryPoints(log)}
+                                                                        className="w-7 h-7 flex items-center justify-center rounded-lg bg-snow/5 hover:bg-spanish text-snow/40 hover:text-snow transition-all shadow-inner"
+                                                                        title="تعديل النقاط"
+                                                                    >
+                                                                        ✏️
+                                                                    </button>
+                                                                    <button 
+                                                                        onClick={() => performAdminDeleteHistoryEntry(log)}
+                                                                        className="w-7 h-7 flex items-center justify-center rounded-lg bg-snow/5 hover:bg-carmine text-snow/40 hover:text-snow transition-all shadow-inner"
+                                                                        title="حذف من السجل"
+                                                                    >
+                                                                        🗑️
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                ))
+                                            )}
+                                        </div>
+                                    </div>
+                                    );
+                                })()}
+                            </div>
+
+                            {!adminMode && (
+                                <div className="text-center pb-8">
+                                    <button
+                                        onClick={() => setShowPasswordPrompt(true)}
+                                        className="text-xs text-snow/20 hover:text-snow/60 transition-colors select-none"
+                                    >
+                                        خيارات القائد
+                                    </button>
+                                </div>
+                            )}
+
+                        </div>
+                    )}
+                </div>
+
+                    {/* Journal Modal */}
+                    {showJournalModal && !adminMode && currentUser && (
+                        <div className="fixed inset-0 z-50 flex items-start justify-center p-4 sm:p-8 overflow-y-auto bg-black/80 backdrop-blur-xl animate-[fadeIn_0.2s_ease-out]">
+                            <div className="glass-panel w-full max-w-2xl min-h-[50vh] flex flex-col relative overflow-hidden shadow-[0_30px_100px_rgba(0,0,0,0.8)] my-auto border-snow/10">
+                                
+                                {/* Header */}
+                                <div className="flex justify-between items-center p-6 border-b border-snow/10 bg-darker/40">
+                                    <h2 className="text-2xl font-black text-snow drop-shadow-md">سجل أعمالي السابقة 📝</h2>
+                                    <button onClick={() => setShowJournalModal(false)} className="w-8 h-8 flex items-center justify-center rounded-full bg-snow/10 hover:bg-carmine text-snow font-black transition-colors shadow-inner">
+                                        ✕
+                                    </button>
+                                </div>
+
+                                {/* Journal Inputs */}
+                                <div className="p-6 bg-darker/60 border-b border-snow/10">
+                                    <h3 className="text-lg font-bold text-saffron mb-4 text-center">إضافة عمل سابق كمسودة للتاريخ</h3>
+                                        <div className="flex flex-col gap-4">
+                                            <textarea 
+                                                rows="3"
+                                                placeholder="ماذا أنجزت؟ اشرح تفاصيل عملك هنا... *"
+                                                value={journalNote}
+                                                onChange={(e) => setJournalNote(e.target.value)}
+                                                className="w-full bg-darker border border-snow/20 focus:border-saffron focus:outline-none rounded-xl px-4 py-3 text-snow font-bold placeholder-snow/40 shadow-inner transition-colors resize-none"
+                                            ></textarea>
+                                            <div className="flex flex-col sm:flex-row gap-4">
+                                                <div className="flex-1 flex flex-col gap-1">
+                                                    <label className="text-xs text-snow/40 mr-2">تاريخ الإنجاز:</label>
+                                                    <input 
+                                                        type="datetime-local" 
+                                                        value={journalDate}
+                                                        onChange={(e) => setJournalDate(e.target.value)}
+                                                        className="w-full bg-darker border border-snow/20 focus:border-saffron focus:outline-none rounded-xl px-4 py-3 text-snow font-bold shadow-inner transition-colors"
+                                                    />
+                                                </div>
+                                                <button
+                                                    onClick={performSaveJournal}
+                                                    disabled={isAddingJournal || !journalNote.trim() || !journalDate}
+                                                    className="sm:self-end px-8 py-3 bg-saffron hover:bg-yellow-400 disabled:bg-darker disabled:text-snow/30 text-darker font-black rounded-xl transition shadow-[0_0_15px_rgba(244,200,43,0.3)] shrink-0 h-[54px]"
+                                                >
+                                                    {isAddingJournal ? <div className="loader !w-5 !h-5 !border-2 !border-darker"></div> : (editingJournalId ? 'تحديث العمل' : 'أضف العمل للسجل')}
+                                                </button>
+                                                {editingJournalId && (
+                                                    <button
+                                                        onClick={() => { setEditingJournalId(null); setJournalNote(""); setJournalDate(""); }}
+                                                        className="sm:self-end px-4 py-3 bg-darker/60 hover:bg-carmine text-snow font-bold rounded-xl transition shadow-lg shrink-0 h-[54px]"
+                                                    >
+                                                        إلغاء التعديل
+                                                    </button>
+                                                )}
+                                            </div>
+                                        </div>
+                                </div>
+
+                                {/* Filtered History List */}
+                                <div className="flex-1 overflow-y-auto p-6 space-y-3 custom-scrollbar min-h-[300px] bg-darker/20">
+                                    {historyLogs.filter(log => log.user === currentUser).length === 0 ? (
+                                        <div className="text-center text-snow/50 py-10 font-bold">لا يوجد أعمال سابقة مسجلة... ابدأ بإضافة عملك الأول!</div>
+                                    ) : (
+                                        historyLogs.filter(log => log.user === currentUser).map(log => (
+                                            <div key={log.id} className="flex flex-col p-4 rounded-xl bg-darker/60 border border-snow/5 hover:border-spanish/30 transition-colors">
+                                                <div className="flex justify-between items-start mb-2 gap-4">
+                                                    <span className="text-sm shadow-sm text-snow/70 bg-darker/80 px-3 py-1 rounded-full whitespace-nowrap">
+                                                        {new Date(log.timestamp).toLocaleString('ar-EG', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute:'2-digit' })}
+                                                    </span>
+                                                    <div className="flex items-center gap-2">
+                                                        {log.amount > 0 ? (
+                                                            <div className="inline-block bg-verdigris/20 border border-verdigris text-verdigris font-black text-xs px-2 py-0.5 rounded shadow">
+                                                                +{log.amount} نقطة
+                                                            </div>
+                                                        ) : (
+                                                            <div className="inline-block bg-saffron/20 border border-saffron text-saffron font-black text-xs px-2 py-0.5 rounded shadow">
+                                                                سجل
+                                                            </div>
+                                                        )}
+                                                        <div className="flex items-center gap-1 ml-2">
+                                                            <button 
+                                                                onClick={() => startEditingJournal(log)}
+                                                                className="w-7 h-7 flex items-center justify-center rounded-lg bg-snow/5 hover:bg-spanish text-snow/60 hover:text-snow transition-all shadow-inner"
+                                                                title="تعديل"
+                                                            >
+                                                                ✏️
+                                                            </button>
+                                                            <button 
+                                                                onClick={() => performDeleteJournal(log.id)}
+                                                                className="w-7 h-7 flex items-center justify-center rounded-lg bg-snow/5 hover:bg-carmine text-snow/60 hover:text-snow transition-all shadow-inner"
+                                                                title="حذف"
+                                                            >
+                                                                🗑️
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <p className="text-snow font-bold text-md leading-relaxed">
+                                                    {log.note || <span className="italic text-snow/30">بدون ملاحظة</span>}
+                                                </p>
+                                            </div>
+                                        ))
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Celebration Overlay */}
+                    {celebration && (
+                        <div className={`fixed inset-0 z-[100] flex flex-col items-center justify-center bg-black/95 backdrop-blur-2xl ${isCelebrationClosing ? 'animate-fade-out' : 'animate-fade-in'}`}>
+                            {/* Explosion Flash Overlay */}
+                            <div className="absolute inset-0 bg-white z-[101] pointer-events-none animate-white-flash opacity-0"></div>
+                            
+                            <div className="absolute top-10 flex flex-col items-center animate-slideDownFade">
+                                <img 
+                                    src="./Logo.png" 
+                                    alt="Logo" 
+                                    className="w-24 sm:w-32 mb-4 drop-shadow-[0_0_15px_rgba(255,255,255,0.2)] invert brightness-200" 
+                                />
+                            </div>
+
+                            <div className="flex flex-col items-center text-center px-6 animate-explosiveIn">
+                                <div className="w-40 h-40 sm:w-56 sm:h-56 mb-8 relative p-[6px] rounded-full overflow-hidden">
+                                     <div 
+                                        className="absolute inset-0 animate-spinSlow"
+                                        style={{
+                                            background: 'conic-gradient(from 0deg, #F4C82B, #F04E3A, #F4C82B, #086FB6, #1FA8A1, #F4C82B)',
+                                            backgroundSize: '200% 200%'
+                                        }}
+                                    ></div>
+                                    <div className="relative bg-darker rounded-full p-1 w-full h-full">
+                                        <div className="w-full h-full rounded-full overflow-hidden border-4 border-darker">
+                                            <img 
+                                                src={`./MdwnhMembers/${celebration.user}.png`} 
+                                                alt={celebration.user} 
+                                                className="w-full h-full object-cover" 
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <h1 className="text-5xl sm:text-7xl font-black text-snow mb-4 drop-shadow-[0_5px_15px_rgba(0,0,0,0.5)]">
+                                    أحسنتم عملاً 🏆
+                                </h1>
+                                <p className="text-2xl sm:text-3xl font-bold text-saffron/90 drop-shadow-md">
+                                    نشكركم على جهدكم 🤍
+                                </p>
+                                
+                                <div className="mt-8 bg-spanish/20 border border-spanish/30 px-6 py-2 rounded-full text-spanish font-black text-xl animate-pulse">
+                                    +30 نقطة ذهبية
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+
+</html>

@@ -139,10 +139,19 @@
             const [journalDate, setJournalDate] = useState("");
             const [isAddingJournal, setIsAddingJournal] = useState(false);
             const [editingJournalId, setEditingJournalId] = useState(null);
+            
+            // Helper to handle Arabic numerals during data entry
+            const arabicToLatin = (str) => {
+                const map = { '٠': '0', '١': '1', '٢': '2', '٣': '3', '٤': '4', '٥': '5', '٦': '6', '٧': '7', '٨': '8', '٩': '9' };
+                return String(str).replace(/[٠-٩]/g, (mat) => map[mat]);
+            };
             const [historyFilterUser, setHistoryFilterUser] = useState("ALL");
             const [hideJournals, setHideJournals] = useState(false);
             const [celebration, setCelebration] = useState(null);
             const [isCelebrationClosing, setIsCelebrationClosing] = useState(false);
+            const [showSparkles, setShowSparkles] = useState(false);
+            const [sparklePositions, setSparklePositions] = useState([]);
+            const [isPageSuckingIn, setIsPageSuckingIn] = useState(false);
 
             const [toast, setToast] = useState(null);
             const [dbError, setDbError] = useState(null);
@@ -172,11 +181,16 @@
                         id,
                         ...info
                     })).sort((a, b) => b.timestamp - a.timestamp);
-                    setHistoryLogs(parsedHistory.slice(0, 50));
+                    setHistoryLogs(parsedHistory);
                 });
                 
                 return () => { unsubscribe(); hUnsubscribe(); };
             }, [db]);
+
+            // Reset scroll to top when changing "pages" (user/admin login/logout)
+            useEffect(() => {
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }, [currentUser, adminMode, showPasswordPrompt]);
 
             const selectUser = (name) => {
                 setCurrentUser(name);
@@ -210,42 +224,74 @@
                     const playerRef = ref(db, `players/${person}`);
                     const snapshot = await get(playerRef);
                     const currentData = snapshot.val() || { totalPoints: 0 };
+                    
+                    const amountNum = parseInt(arabicToLatin(amount)) || 0;
 
                     await set(playerRef, {
-                        totalPoints: currentData.totalPoints + amount,
+                        totalPoints: currentData.totalPoints + amountNum,
                         lastUpdated: serverTimestamp()
                     });
 
                     const historyDbRef = ref(db, 'history');
                     await push(historyDbRef, {
                         user: person,
-                        amount: amount,
+                        amount: amountNum,
                         note: achievementNote,
                         timestamp: Date.now()
                     });
 
-                    playPointAudio(amount);
-                    if (!adminMode && amount === 30) {
+                    playPointAudio(amountNum);
+                    if (!adminMode && amountNum === 30) {
+                        setIsPageSuckingIn(true);
                         setTimeout(() => {
                             setCelebration({ user: person, points: 30 });
                             setIsCelebrationClosing(false);
                             triggerConfetti(amount);
                             
+                            // Immediately start the smooth transition back to scale(1)
+                            setIsPageSuckingIn(false); 
+                            
+                            // Sparkles appear 2s after sound (T=0)
+                            setTimeout(() => {
+                                const newSparkles = [...Array(30)].map(() => {
+                                    let top, left;
+                                    do {
+                                        top = Math.random() * 100;
+                                        left = Math.random() * 100;
+                                    } while (Math.sqrt(Math.pow(top-50, 2) + Math.pow(left-50, 2)) < 30);
+                                    return {
+                                        top, left,
+                                        delay: Math.random() * 0.5,
+                                        speed: 2.5 + Math.random() * 2
+                                    };
+                                });
+                                setSparklePositions(newSparkles);
+                                setShowSparkles(true);
+                            }, 2000);
+                            
                             // Start fade-out slightly before clearing
                             setTimeout(() => setIsCelebrationClosing(true), 5200); // 5.2s Fade-out start
-                            setTimeout(() => setCelebration(null), 6000); // 6s State clear
+                            setTimeout(() => {
+                                setCelebration(null);
+                                setShowSparkles(false);
+                            }, 6000); // 6s State clear
                         }, 700); // 0.7s Dramatic delay
                     } else {
                         triggerConfetti(amount);
                     }
-
-                    setToast("شكرًا على عملكم المتقن!");
-                    setTimeout(() => setToast(null), 3500);
+                    
+                    // Only show toast for smaller amounts to not clutter the big celebration
+                    if (amount !== 30) {
+                        setToast("شكرًا على عملكم المتقن!");
+                        setTimeout(() => setToast(null), 3500);
+                    }
                     setAchievementNote("");
 
                 } catch (error) {
                     alert("تعذر إضافة النقاط. " + error.message);
                 } finally {
+                    // Dramatic button stay for big wins
+                    if (amount === 30) await new Promise(resolve => setTimeout(resolve, 3000));
                     setIsAddingPoints(false);
                     setAddingPointsLabel(null);
                 }
@@ -418,8 +464,15 @@
             const activeActionUser = adminMode ? (targetUser || "اختر عضواً") : currentUser;
 
             return (
-                <div className="relative min-h-screen">
-                    <div className={`transition-all duration-500 ${showJournalModal ? 'blur-md scale-[0.98] opacity-30 pointer-events-none' : ''}`}>
+                <div className="relative min-h-screen overflow-x-hidden">
+                    <div 
+                        className={`origin-center h-full w-full transition-all ${showJournalModal ? 'blur-md scale-[0.98] opacity-30 pointer-events-none' : ''}`}
+                        style={{
+                            transform: isPageSuckingIn ? 'scale(1.08)' : 'scale(1)',
+                            transitionDuration: isPageSuckingIn ? '700ms' : '800ms',
+                            transitionTimingFunction: isPageSuckingIn ? 'cubic-bezier(0.7, 0, 0.84, 0)' : 'ease-out'
+                        }}
+                    >
                         {/* Animated Blob Gradients matching Brand Colors */}
                     <div className="fixed inset-0 overflow-hidden pointer-events-none z-[-1] opacity-50 mix-blend-screen">
                         <div className="absolute w-[600px] h-[600px] rounded-full bg-saffron/20 blur-3xl -top-40 -left-20 animate-blob1"></div>
@@ -439,7 +492,7 @@
                     )}
 
                     {(!currentUser && !adminMode && !showPasswordPrompt) && (
-                        <>
+                        <div className="relative">
                             {/* specific login bg */}
                             <div className="fixed inset-0 z-[-2] opacity-10 bg-cover bg-center" style={{ backgroundImage: "url('./BG.jpg')" }}></div>
 
@@ -460,7 +513,7 @@
                                             className="group flex flex-col items-center gap-2 transition-transform hover:-translate-y-1 active:scale-95"
                                         >
                                             <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full border-[3px] border-darker bg-darker overflow-hidden group-hover:border-spanish transition-colors shadow-lg">
-                                                <img src={`./MdwnhMembers/${name}.png`} alt={name} className="w-full h-full object-cover" onError={(e) => { e.target.src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><rect fill="%23262626" width="100" height="100"/><text x="50" y="55" font-family="sans-serif" font-size="40" text-anchor="middle" fill="%23faf9f7">?</text></svg>' }} />
+                                                <img src={`./MdwnhMembers/${name}.png`} alt={name} className="w-full h-full object-cover" loading="lazy" onError={(e) => { e.target.src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><rect fill="%23262626" width="100" height="100"/><text x="50" y="55" font-family="sans-serif" font-size="40" text-anchor="middle" fill="%23faf9f7">?</text></svg>' }} />
                                             </div>
                                             <span className="text-snow font-bold text-sm tracking-wide bg-darker/80 px-4 py-1.5 rounded-full group-hover:bg-spanish transition-colors">
                                                 {name}
@@ -473,7 +526,7 @@
                                     خيارات القائد
                                 </button>
                             </div>
-                        </>
+                        </div>
                     )}
 
                     {showPasswordPrompt && (
@@ -808,8 +861,13 @@
                                         </div>
                                 </div>
 
-                                {/* Filtered History List */}
-                                <div className="flex-1 overflow-y-auto p-6 space-y-3 custom-scrollbar min-h-[300px] bg-darker/20">
+                                {/* Filtered History List - with subtle bottom fade */}
+                                <div className="flex-1 overflow-y-auto p-6 pt-2 space-y-3 custom-scrollbar min-h-[400px] bg-darker/20"
+                                     style={{
+                                         WebkitMaskImage: 'linear-gradient(to bottom, black 85%, transparent 100%)',
+                                         maskImage: 'linear-gradient(to bottom, black 85%, transparent 100%)'
+                                     }}
+                                >
                                     {historyLogs.filter(log => log.user === currentUser).length === 0 ? (
                                         <div className="text-center text-snow/50 py-10 font-bold">لا يوجد أعمال سابقة مسجلة... ابدأ بإضافة عملك الأول!</div>
                                     ) : (
@@ -861,6 +919,20 @@
                     {/* Celebration Overlay */}
                     {celebration && (
                         <div className={`fixed inset-0 z-[100] flex flex-col items-center justify-center bg-black/95 backdrop-blur-2xl ${isCelebrationClosing ? 'animate-fade-out' : 'animate-fade-in'}`}>
+                            {/* Cinematic Background Avatar - 5% Opacity Quick Pan */}
+                            <div className="absolute inset-0 pointer-events-none overflow-hidden z-[-1] opacity-[0.05]"
+                                 style={{
+                                     WebkitMaskImage: 'radial-gradient(circle, black 30%, transparent 80%)',
+                                     maskImage: 'radial-gradient(circle, black 30%, transparent 80%)'
+                                 }}
+                            >
+                                <img 
+                                    src={`./MdwnhMembers/${celebration.user}.png`} 
+                                    alt="Background Avatar" 
+                                    className="w-full h-full object-cover animate-pan-quick blur-sm" 
+                                />
+                            </div>
+                            
                             {/* Explosion Flash Overlay */}
                             <div className="absolute inset-0 bg-white z-[101] pointer-events-none animate-white-flash opacity-0"></div>
                             
@@ -873,36 +945,59 @@
                             </div>
 
                             <div className="flex flex-col items-center text-center px-6 animate-explosiveIn">
-                                <div className="w-40 h-40 sm:w-56 sm:h-56 mb-8 relative p-[6px] rounded-full overflow-hidden">
-                                     <div 
-                                        className="absolute inset-0 animate-spinSlow"
-                                        style={{
-                                            background: 'conic-gradient(from 0deg, #F4C82B, #F04E3A, #F4C82B, #086FB6, #1FA8A1, #F4C82B)',
-                                            backgroundSize: '200% 200%'
-                                        }}
+                                <div className="w-40 h-40 sm:w-56 sm:h-56 mb-8 relative">
+                                    {/* Brand Glow Backdrop - 200% Larger & More Transparent */}
+                                    <div className="absolute inset-[-120px] rounded-full blur-[100px] opacity-40 animate-pulse"
+                                         style={{
+                                             background: 'conic-gradient(#F4C82B, #F04E3A, #086FB6, #1FA8A1, #F4C82B)'
+                                         }}
                                     ></div>
-                                    <div className="relative bg-darker rounded-full p-1 w-full h-full">
-                                        <div className="w-full h-full rounded-full overflow-hidden border-4 border-darker">
-                                            <img 
-                                                src={`./MdwnhMembers/${celebration.user}.png`} 
-                                                alt={celebration.user} 
-                                                className="w-full h-full object-cover" 
-                                            />
+                                    
+                                    <div className="relative w-full h-full p-[6px] rounded-full overflow-hidden shadow-[0_0_40px_rgba(244,200,43,0.3)]">
+                                        <div 
+                                            className="absolute inset-0 animate-spinSlow"
+                                            style={{
+                                                background: 'conic-gradient(from 0deg, #F4C82B, #F04E3A, #F4C82B, #086FB6, #1FA8A1, #F4C82B)',
+                                                backgroundSize: '200% 200%'
+                                            }}
+                                        ></div>
+                                        <div className="relative bg-darker rounded-full p-1 w-full h-full">
+                                            <div className="w-full h-full rounded-full overflow-hidden border-4 border-darker">
+                                                <img 
+                                                    src={`./MdwnhMembers/${celebration.user}.png`} 
+                                                    alt={celebration.user} 
+                                                    className="w-full h-full object-cover" 
+                                                />
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
 
-                                <h1 className="text-5xl sm:text-7xl font-black text-snow mb-4 drop-shadow-[0_5px_15px_rgba(0,0,0,0.5)]">
-                                    أحسنتم عملاً 🏆
-                                </h1>
-                                <p className="text-2xl sm:text-3xl font-bold text-saffron/90 drop-shadow-md">
-                                    نشكركم على جهدكم 🤍
-                                </p>
-                                
-                                <div className="mt-8 bg-spanish/20 border border-spanish/30 px-6 py-2 rounded-full text-spanish font-black text-xl animate-pulse">
-                                    +30 نقطة ذهبية
-                                </div>
+                                <h2 className="text-4xl sm:text-6xl font-black text-white mb-4 drop-shadow-lg animate-explosiveIn">أحسنتم عملاً</h2>
+                                <p className="text-xl sm:text-2xl text-snow/90 mb-6 drop-shadow-md animate-[slideDownFade_1s_ease-out_0.2s_backwards]">نشكركم على جهدكم 🤍</p>
                             </div>
+
+                            {/* White Sparkles Overlay - Appears after 3s */}
+                            {showSparkles && (
+                                <div className="absolute inset-0 pointer-events-none overflow-hidden z-[90]">
+                                    {sparklePositions.map((sparkle, i) => (
+                                        <div 
+                                            key={i} 
+                                            className="absolute animate-sparkle-up opacity-0"
+                                            style={{
+                                                top: `${sparkle.top}%`,
+                                                left: `${sparkle.left}%`,
+                                                animationDelay: `${sparkle.delay}s`,
+                                                animationDuration: `${sparkle.speed}s`
+                                            }}
+                                        >
+                                            <svg className="w-5 h-5 sm:w-7 sm:h-7 fill-white drop-shadow-[0_0_8px_rgba(255,255,255,0.8)]" viewBox="0 0 24 24" style={{ stroke: 'none' }}>
+                                                <path d="M12 2L10.5 8.5L4 10L10.5 11.5L12 18L13.5 11.5L20 10L13.5 8.5L12 2Z" />
+                                            </svg>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
                         </div>
                     )}
                 </div>

@@ -43,6 +43,15 @@ module.exports = {
                 "0%": { opacity: "0" },
                 "5%": { opacity: "1" },
                 "100%": { opacity: "0" }
+            },
+            panHorizontal: {
+                "0%": { transform: "scale(2.5) translateX(-15%)" },
+                "100%": { transform: "scale(2.5) translateX(15%)" }
+            },
+            sparkleUp: {
+                "0%": { transform: "scale(0) translateY(0)", opacity: "0" },
+                "10%": { opacity: "1" },
+                "100%": { transform: "scale(1) translateY(-150px)", opacity: "0.5" }
             }
         },
         animation: {
@@ -50,12 +59,14 @@ module.exports = {
             blob2: "blob 20s infinite alternate-reverse ease-in-out",
             blob3: "blob 18s infinite alternate ease-in-out",
             blob4: "blob 22s infinite alternate-reverse ease-in-out",
-            explosiveIn: "explosiveIn 0.7s cubic-bezier(0.34, 1.56, 0.64, 1)",
-            slideDownFade: "slideDownFade 0.9s ease-out",
+            explosiveIn: "explosiveIn 0.8s cubic-bezier(0.34, 1.56, 0.64, 1)",
+            slideDownFade: "slideDownFade 1s ease-out",
             spinSlow: "spin 4s linear infinite",
             "fade-in": "fadeIn 0.5s ease-out",
             "fade-out": "fadeOut 0.7s ease-in forwards",
-            "white-flash": "whiteFlash 0.4s ease-out forwards"
+            "white-flash": "whiteFlash 0.4s ease-out forwards",
+            "pan-quick": "panHorizontal 6s linear forwards",
+            "sparkle-up": "sparkleUp 8s linear forwards"
         }
     }
   },

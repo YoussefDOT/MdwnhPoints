@@ -299,11 +299,26 @@
                 if (!confirm("هل أنت متأكد من رغبتك في حذف هذا العمل؟")) return;
                 try {
                     const journalRef = ref(db, 'history/' + id);
-                    await remove(journalRef);
-                    setToast("تم حذف العمل بنجاح!");
+                    const snapshot = await get(journalRef);
+                    const logData = snapshot.val();
+                    
+                    if (logData) {
+                        // 1. Sync Points if it's a point-bearing task
+                        if (logData.amount > 0) {
+                            const playerRef = ref(db, `players/${logData.user}/totalPoints`);
+                            const playerSnap = await get(playerRef);
+                            const currentTotal = playerSnap.val() || 0;
+                            await set(playerRef, Math.max(0, currentTotal - logData.amount));
+                        }
+                        
+                        // 2. Remove the actual log
+                        await remove(journalRef);
+                    }
+
+                    setToast("تم حذف العمل وتحديث الرصيد!");
                     setTimeout(() => setToast(null), 3500);
                 } catch (error) {
-                    alert("تعذر حذف العمل. " + error.message);
+                    alert("تعذر حذف العمل: " + error.message);
                 }
             };
 

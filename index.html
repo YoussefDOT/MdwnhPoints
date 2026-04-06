@@ -215,7 +215,8 @@
                 return String(str).replace(/[٠-٩]/g, (mat) => map[mat]);
             };
             const [historyFilterUser, setHistoryFilterUser] = useState("ALL");
-            const [hideJournals, setHideJournals] = useState(false);
+            const [historySettings, setHistorySettings] = useState({ showLogs: true, showPunishments: true, showRewards: true });
+            
             const [celebration, setCelebration] = useState(null);
             const [isCelebrationClosing, setIsCelebrationClosing] = useState(false);
             const [showSparkles, setShowSparkles] = useState(false);
@@ -223,7 +224,7 @@
             const [isPageSuckingIn, setIsPageSuckingIn] = useState(false);
             const [pointsPopAnim, setPointsPopAnim] = useState(false);
 
-            const [toast, setToast] = useState(null);
+            const [toast, setToast] = useState(null); // { message, visible }
             const [dbError, setDbError] = useState(null);
 
             const [adminMode, setAdminMode] = useState(false);
@@ -319,6 +320,29 @@
                 }
             };
 
+            const showToast = (message) => {
+                setToast({ message, visible: true });
+                setTimeout(() => {
+                    setToast(prev => prev ? { ...prev, visible: false } : null);
+                    setTimeout(() => setToast(null), 400);
+                }, 3000);
+            };
+
+            const toggleHistorySetting = async (key) => {
+                const newVal = !historySettings[key];
+                const updated = { ...historySettings, [key]: newVal };
+                setHistorySettings(updated);
+                
+                if (adminMode) {
+                    try {
+                        const settingsRef = ref(db, 'settings/historyVisibility');
+                        await set(settingsRef, updated);
+                    } catch (e) {
+                        console.error("Failed to sync settings:", e);
+                    }
+                }
+            };
+
             const logout = () => {
                 setCurrentUser(null);
                 setAdminMode(false);
@@ -363,11 +387,11 @@
             };
 
             const performAddPoints = async (amount, person, options = {}) => {
-                const { silent = false, noToast = false, skipCelebrationSound = false } = options;
+                const { silent = false, noToast = false, noConfetti = false, skipCelebrationSound = false } = options;
                 setIsAddingPoints(true);
                 setAddingPointsLabel(amount);
 
-                let amountNum = 0; // Define outside try for finally scope
+                let amountNum = 0; 
                 try {
                     amountNum = parseInt(arabicToLatin(amount)) || 0;
                     if (!silent) await new Promise(resolve => setTimeout(resolve, 300));
@@ -386,42 +410,40 @@
                     await push(historyDbRef, {
                         user: person,
                         amount: amountNum,
-                        note: achievementNote || (options.isWheel ? "دائرة الحظ" : ""),
+                        note: options.note || achievementNote || (options.isWheel ? (options.isPunishment ? "دائرة العقاب" : "دائرة المكافأة") : ""),
                         timestamp: Date.now(),
-                        isWheel: options.isWheel || false
+                        isWheel: options.isWheel || false,
+                        isPunishment: options.isPunishment || false
                     });
+
+                    const shouldConfetti = !silent && !noConfetti;
 
                     if (!silent && !adminMode && amountNum === 30) {
                         triggerCelebration(person, 30, skipCelebrationSound);
-                    } else if (!silent) {
-                        playPointAudio(amountNum);
+                    } else if (shouldConfetti) {
+                        if (!silent) playPointAudio(amountNum);
                         triggerConfetti(amountNum);
                     }
 
                     if (amountNum === 30 && silent) {
-                        // This is for the wheel result +30
                         triggerCelebration(person, 30, true);
-                    } else if (silent && amountNum < 30) {
+                    } else if (silent && amountNum < 30 && !noConfetti) {
                         triggerConfetti(amountNum);
                     }
 
-                    // Pop animation on the header points - only for non-30 amounts
                     if (amountNum !== 30) {
                         setPointsPopAnim(true);
                         setTimeout(() => setPointsPopAnim(false), 700);
                     }
 
-                    // Only show toast for smaller amounts to not clutter the big celebration
                     if (!noToast && amountNum !== 30) {
-                        setToast("شكرًا على عملكم المتقن!");
-                        setTimeout(() => setToast(null), 3500);
+                        showToast("شكرًا على عملكم المتقن!");
                     }
                     setAchievementNote("");
 
                 } catch (error) {
                     alert("تعذر إضافة النقاط. " + error.message);
                 } finally {
-                    // Dramatic button stay for big wins
                     if (amountNum === 30 && !silent) await new Promise(resolve => setTimeout(resolve, 3000));
                     setIsAddingPoints(false);
                     setAddingPointsLabel(null);
@@ -431,14 +453,16 @@
             const spinWheel = (type) => {
                 if (wheelSpinning) return;
 
-                const items = type === 'PUNISHMENT' ? PUNISHMENTS : REWARDS;
-                const resultIndex = Math.floor(Math.random() * items.length);
-                const result = items[resultIndex];
+                const result = type === 'PUNISHMENT' 
+                    ? PUNISHMENTS[Math.floor(Math.random() * PUNISHMENTS.length)]
+                    : REWARDS[Math.floor(Math.random() * REWARDS.length)];
 
                 setWheelResult(result);
                 setWheelSpinning(true);
                 setShowWheelResultOverlay(false);
 
+                const items = type === 'PUNISHMENT' ? PUNISHMENTS : REWARDS;
+                const resultIndex = items.indexOf(result);
                 const segmentAngle = 360 / items.length;
                 const extraSpins = 12;
 
@@ -470,7 +494,18 @@
 
                 setTimeout(() => {
                     setWheelSpinning(false);
-                    if (type === 'REWARD') {
+                    if (type === 'PUNISHMENT') {
+                        // Log the punishment to history with amount 0
+                        performAddPoints("0", currentUser, { 
+                            silent: true, 
+                            isWheel: true, 
+                            isPunishment: true, 
+                            noConfetti: true,
+                            noToast: true,
+                            note: result 
+                        });
+                        setShowWheelResultOverlay(true);
+                    } else if (type === 'REWARD') {
                         if (result < 30) {
                             performAddPoints(result.toString(), currentUser, { silent: true, isWheel: true });
                             setShowWheelResultOverlay(true);
@@ -512,8 +547,7 @@
 
                     setJournalNote("");
                     setJournalDate("");
-                    setToast(isUpdating ? "تم تحديث العمل بنجاح!" : "تم تسجيل العمل بنجاح!");
-                    setTimeout(() => setToast(null), 3500);
+                    showToast(isUpdating ? "تم تحديث العمل بنجاح!" : "تم تسجيل العمل بنجاح!");
                 } catch (error) {
                     alert("تعذر حفظ العمل. " + error.message);
                 } finally {
@@ -551,8 +585,7 @@
                         ...(log.isJournal ? { isJournal: true } : {})
                     });
                     setEditPopup(null);
-                    setToast("تم تحديث العمل بنجاح!");
-                    setTimeout(() => setToast(null), 3500);
+                    showToast("تم تحديث العمل بنجاح!");
                 } catch (err) {
                     alert("تعذر التعديل: " + err.message);
                 } finally {
@@ -635,8 +668,7 @@
                     const historyRef = ref(db, `history/${log.id}`);
                     await remove(historyRef);
 
-                    setToast("تم حذف الإنجاز وتحديث الرصيد!");
-                    setTimeout(() => setToast(null), 3500);
+                    showToast("تم حذف الإنجاز وتحديث الرصيد!");
                 } catch (error) {
                     alert("خطأ في الحذف: " + error.message);
                 }
@@ -661,8 +693,7 @@
                     const historyRef = ref(db, `history/${log.id}/amount`);
                     await set(historyRef, newPoints);
 
-                    setToast("تم تعديل النقاط وتحديث الرصيد!");
-                    setTimeout(() => setToast(null), 3500);
+                    showToast("تم تعديل النقاط وتحديث الرصيد!");
                 } catch (error) {
                     alert("خطأ في التعديل: " + error.message);
                 }
@@ -680,9 +711,8 @@
                         lastUpdated: serverTimestamp()
                     });
 
-                    playSynthSound(30);
-                    setToast("تم تعيين النقاط بنجاح!");
-                    setTimeout(() => setToast(null), 3500);
+                    playPointAudio(30);
+                    showToast("تم تعيين النقاط بنجاح!");
                     setManualTargetPoints("");
 
                 } catch (error) {
@@ -698,6 +728,20 @@
                 if (!person) return;
                 performAddPoints(amount, person);
             };
+
+            const Toggle = ({ label, active, onClick }) => (
+                <div 
+                    className="flex flex-col items-center gap-1.5 cursor-pointer select-none group" 
+                    onClick={onClick}
+                >
+                    <span className="text-[10px] sm:text-[11px] font-bold text-snow/40 group-hover:text-snow/70 transition-colors uppercase tracking-widest leading-none">
+                        {label}
+                    </span>
+                    <div className={`w-11 h-6 rounded-full p-1 transition-all duration-300 flex items-center shadow-lg ${active ? 'bg-verdigris shadow-[0_0_20px_rgba(31,168,161,0.4)]' : 'bg-darker border border-white/10'}`}>
+                        <div className={`w-4 h-4 rounded-full bg-white shadow-md toggle-dot transform transition-all duration-300 ${active ? 'translate-x-5' : 'translate-x-0'}`}></div>
+                    </div>
+                </div>
+            );
 
             const BrandGradientOutline = ({ children }) => (
                 <div className="relative p-[6px] rounded-full overflow-hidden group">
@@ -722,9 +766,9 @@
                     {/* Toast - rendered at top level so it's always fixed above everything */}
                     {toast && (
                         <div className="fixed bottom-10 inset-x-0 z-[999] flex justify-center pointer-events-none px-4">
-                            <div className="bg-darker text-snow font-bold px-8 py-4 rounded-full shadow-[0_10px_40px_rgba(8,111,182,0.5)] border border-snow/10 flex items-center gap-3 text-lg toast-anim max-w-xs sm:max-w-none text-center">
+                            <div className={`bg-darker text-snow font-bold px-8 py-4 rounded-full shadow-[0_10px_40px_rgba(8,111,182,0.5)] border border-snow/10 flex items-center gap-3 text-lg text-center max-w-xs sm:max-w-none transform transition-all duration-300 ${toast.visible ? 'toast-anim opacity-100' : 'toast-exit opacity-0'}`}>
                                 <span>🎉</span>
-                                {toast}
+                                {toast.message}
                             </div>
                         </div>
                     )}
@@ -986,25 +1030,45 @@
 
                                     {/* Left Side: History (Admin Only) */}
                                     {adminMode && (() => {
-                                        const displayedHistory = historyLogs.filter(log => (historyFilterUser === "ALL" || log.user === historyFilterUser) && (!hideJournals || log.amount > 0));
+                                        const displayedHistory = historyLogs.filter(log => {
+                                            const userMatch = historyFilterUser === "ALL" || log.user === historyFilterUser;
+                                            const typeMatch = 
+                                                (historySettings.showLogs && (!log.isWheel && log.amount === 0)) || // Journals
+                                                (historySettings.showPunishments && log.isPunishment) || // Wheel Punishments
+                                                (historySettings.showRewards && log.isWheel && !log.isPunishment) || // Wheel Rewards
+                                                (!log.isWheel && log.amount > 0); // Manual points (Always show)
+                                            return userMatch && typeMatch;
+                                        });
                                         return (
                                             <div className="glass-panel p-6 sm:p-10 flex flex-col h-full">
-                                                <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mb-10">
-                                                    <h2 className="text-3xl font-black text-center text-snow drop-shadow-md shrink-0">
+                                                <div className="text-center mb-10 w-full">
+                                                    <h2 className="text-3xl font-black text-snow drop-shadow-md mb-8">
                                                         📝 سجل الإنجازات
                                                     </h2>
-                                                    <div className="flex flex-wrap gap-2 justify-center sm:justify-end w-full sm:w-auto">
-                                                        <button
-                                                            onClick={() => setHideJournals(!hideJournals)}
-                                                            className={`px-4 py-2 rounded-xl border text-sm font-bold transition-all duration-300 shadow-md flex items-center gap-2 ${hideJournals ? 'bg-carmine text-snow border-carmine shadow-[0_0_15px_rgba(240,78,58,0.3)]' : 'bg-darker/60 text-snow border-snow/30 hover:border-saffron hover:text-saffron shadow-inner'}`}
-                                                        >
-                                                            <span className={`w-3 h-3 rounded-full ${hideJournals ? 'bg-snow' : 'bg-snow/20'}`}></span>
-                                                            {hideJournals ? 'إظهار السجلات' : 'إخفاء السجلات'}
-                                                        </button>
+                                                    
+                                                    <div className="flex flex-wrap items-center justify-center gap-4 w-full">
+                                                        <div className="flex bg-darker/50 p-2 rounded-2xl shadow-[inset_0_2px_8px_rgba(0,0,0,0.5)] border-none outline-none grow sm:grow-0 justify-around sm:justify-center gap-6">
+                                                            <Toggle 
+                                                                label="السجلات" 
+                                                                active={historySettings.showLogs} 
+                                                                onClick={() => toggleHistorySetting('showLogs')} 
+                                                            />
+                                                            <Toggle 
+                                                                label="العقاب" 
+                                                                active={historySettings.showPunishments} 
+                                                                onClick={() => toggleHistorySetting('showPunishments')} 
+                                                            />
+                                                            <Toggle 
+                                                                label="المكافأة" 
+                                                                active={historySettings.showRewards} 
+                                                                onClick={() => toggleHistorySetting('showRewards')} 
+                                                            />
+                                                        </div>
+                                                        
                                                         <select
                                                             value={historyFilterUser}
                                                             onChange={(e) => setHistoryFilterUser(e.target.value)}
-                                                            className="bg-darker/60 text-snow border border-snow/10 rounded-xl px-4 py-2 focus:outline-none focus:border-saffron font-bold text-sm w-full sm:w-auto shadow-inner"
+                                                            className="bg-darker/60 text-snow border border-snow/10 rounded-xl px-4 py-2 focus:outline-none focus:border-saffron font-bold text-sm w-full sm:w-auto shadow-inner h-[52px]"
                                                         >
                                                             <option value="ALL">عرض الكل</option>
                                                             {MEMBERS.map(name => (
@@ -1026,6 +1090,18 @@
                                                                 <div className="flex-1">
                                                                     <div className="flex justify-between items-start mb-1">
                                                                         <span className="font-bold text-lg text-snow">{log.user}</span>
+                                                                        <div className="flex gap-2">
+                                                                            {log.isWheel && !log.isPunishment && (
+                                                                                <span className="bg-saffron/10 border border-saffron/30 text-saffron text-[10px] px-2 py-0.5 rounded-full font-black animate-pulse">
+                                                                                    دائرة المكافأة 🎡
+                                                                                </span>
+                                                                            )}
+                                                                            {log.isPunishment && (
+                                                                                <span className="bg-carmine/10 border border-carmine/30 text-carmine text-[10px] px-2 py-0.5 rounded-full font-black animate-pulse">
+                                                                                    دائرة العقاب 🎡
+                                                                                </span>
+                                                                            )}
+                                                                        </div>
                                                                         <span className="text-xs text-snow/40 bg-darker px-2 py-1 rounded-full whitespace-nowrap">
                                                                             {new Date(log.timestamp).toLocaleString('ar-EG', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                                                                         </span>
@@ -1037,6 +1113,10 @@
                                                                         {log.amount > 0 ? (
                                                                             <div className="inline-block bg-spanish text-snow font-black text-sm px-2 py-0.5 rounded shadow">
                                                                                 +{log.amount} نقطة
+                                                                            </div>
+                                                                        ) : log.isPunishment ? (
+                                                                            <div className="inline-block bg-carmine/20 border border-carmine text-carmine font-black text-xs px-2 py-0.5 rounded shadow">
+                                                                                عقاب ⚔️
                                                                             </div>
                                                                         ) : (
                                                                             <div className="inline-block bg-carmine/20 border border-carmine text-carmine font-black text-sm px-2 py-0.5 rounded shadow">
@@ -1181,7 +1261,7 @@
                                     {historyLogs.filter(log => log.user === currentUser).length === 0 ? (
                                         <div className="text-center text-snow/50 py-10 font-bold">لا يوجد أعمال سابقة مسجلة... ابدأ بإضافة عملك الأول!</div>
                                     ) : (
-                                        historyLogs.filter(log => log.user === currentUser).map(log => (
+                                        historyLogs.filter(log => log.user === currentUser && !log.isPunishment).map(log => (
                                             <div key={log.id} className="flex flex-col p-4 rounded-xl bg-darker/60 border border-snow/5 hover:border-spanish/30 transition-colors">
                                                         <div className="flex justify-between items-start mb-2 gap-4">
                                                             <div className="flex items-center gap-2 flex-wrap">

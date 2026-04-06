@@ -1712,6 +1712,10 @@ video {
   background-color: rgb(244 200 43 / var(--tw-bg-opacity, 1));
 }
 
+.bg-saffron\/10 {
+  background-color: rgb(244 200 43 / 0.1);
+}
+
 .bg-saffron\/20 {
   background-color: rgb(244 200 43 / 0.2);
 }
@@ -1962,6 +1966,10 @@ video {
 .text-6xl {
   font-size: 3.75rem;
   line-height: 1;
+}
+
+.text-\[10px\] {
+  font-size: 10px;
 }
 
 .text-\[7px\] {

@@ -1001,29 +1001,49 @@
                                             {players.length === 0 ? (
                                                 <div className="text-center text-snow/50 py-10 font-bold">لا يوجد نقاط مسجلة بعد...</div>
                                             ) : (
-                                                players.map((p, index) => {
-                                                    let medal = null;
-                                                    let glow = '';
-                                                    if (index === 0) { medal = '🥇'; glow = 'shadow-[0_0_20px_rgba(244,200,43,0.3)] border-saffron/50'; }
-                                                    else if (index === 1) { medal = '🥈'; glow = 'shadow-[0_0_15px_rgba(250,249,247,0.2)] border-snow/30'; }
-                                                    else if (index === 2) { medal = '🥉'; glow = 'shadow-[0_0_10px_rgba(240,78,58,0.2)] border-carmine/30'; }
-                                                    else { glow = 'border-snow/5'; medal = <span className="text-snow/30 text-xl font-black px-2">{index + 1}</span>; }
+                                                (() => {
+                                                    const groupedGroups = [];
+                                                    players.forEach(p => {
+                                                        if (groupedGroups.length > 0 && groupedGroups[groupedGroups.length - 1][0].points === p.points) {
+                                                            groupedGroups[groupedGroups.length - 1].push(p);
+                                                        } else {
+                                                            groupedGroups.push([p]);
+                                                        }
+                                                    });
+                                                    
+                                                    return groupedGroups.map((group, index) => {
+                                                        let medal = null;
+                                                        let glow = '';
+                                                        if (index === 0) { medal = '🥇'; glow = 'shadow-[0_0_20px_rgba(244,200,43,0.3)] border-saffron/50'; }
+                                                        else if (index === 1) { medal = '🥈'; glow = 'shadow-[0_0_15px_rgba(250,249,247,0.2)] border-snow/30'; }
+                                                        else if (index === 2) { medal = '🥉'; glow = 'shadow-[0_0_10px_rgba(240,78,58,0.2)] border-carmine/30'; }
+                                                        else { glow = 'border-snow/5'; medal = <span className="text-snow/30 text-xl font-black px-2">{index + 1}</span>; }
 
-                                                    return (
-                                                        <div key={p.name} className={`flex items-center justify-between p-4 rounded-2xl bg-darker/60 border-2 transition-transform hover:scale-[1.02] ${glow}`}>
-                                                            <div className="flex items-center gap-4">
-                                                                <div className="text-4xl w-10 text-center drop-shadow-lg">{medal}</div>
-                                                                <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full overflow-hidden border-2 border-darker bg-raisin shrink-0">
-                                                                    <img src={`./MdwnhMembers/${p.name}.png`} alt={p.name} className="w-full h-full object-cover" />
-                                                                </div>
-                                                                <span className="font-bold text-xl sm:text-2xl text-snow drop-shadow-sm">{p.name}</span>
+                                                        return (
+                                                            <div key={`rank-${index}`} className={`flex flex-col p-4 rounded-2xl bg-darker/60 border-2 transition-transform hover:scale-[1.02] ${glow}`}>
+                                                                {group.map((p, pIndex) => (
+                                                                    <React.Fragment key={p.name}>
+                                                                        <div className="flex items-center justify-between">
+                                                                            <div className="flex items-center gap-4">
+                                                                                <div className="text-4xl w-10 text-center drop-shadow-lg">{medal}</div>
+                                                                                <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full overflow-hidden border-2 border-darker bg-raisin shrink-0">
+                                                                                    <img src={`./MdwnhMembers/${p.name}.png`} alt={p.name} className="w-full h-full object-cover" />
+                                                                                </div>
+                                                                                <span className="font-bold text-xl sm:text-2xl text-snow drop-shadow-sm">{p.name}</span>
+                                                                            </div>
+                                                                            <div className="text-4xl font-black bg-clip-text text-transparent bg-gradient-to-l from-saffron to-verdigris pr-6 drop-shadow-lg">
+                                                                                {p.points}
+                                                                            </div>
+                                                                        </div>
+                                                                        {pIndex < group.length - 1 && (
+                                                                            <hr className="my-4 border-snow/10 w-full" />
+                                                                        )}
+                                                                    </React.Fragment>
+                                                                ))}
                                                             </div>
-                                                            <div className="text-4xl font-black bg-clip-text text-transparent bg-gradient-to-l from-saffron to-verdigris pr-6 drop-shadow-lg">
-                                                                {p.points}
-                                                            </div>
-                                                        </div>
-                                                    );
-                                                })
+                                                        );
+                                                    });
+                                                })()
                                             )}
                                         </div>
                                     </div>

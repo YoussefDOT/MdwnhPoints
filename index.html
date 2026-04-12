@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ستوديو مدونة - جدول الصدارة</title>
+    <title>ستوديو مدونة - قائمة الانجاز</title>
 
     <!-- Google Fonts: Rubik -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -188,6 +188,7 @@
             const [wheelRotation, setWheelRotation] = useState(0);
             const [wheelResult, setWheelResult] = useState(null);
             const [showWheelResultOverlay, setShowWheelResultOverlay] = useState(false);
+            const [isAudioLoading, setIsAudioLoading] = useState(false);
             const wheelAudioRef = useRef(null);
 
             // Edit popup state
@@ -216,7 +217,7 @@
             };
             const [historyFilterUser, setHistoryFilterUser] = useState("ALL");
             const [historySettings, setHistorySettings] = useState({ showLogs: true, showPunishments: true, showRewards: true });
-            
+
             const [celebration, setCelebration] = useState(null);
             const [isCelebrationClosing, setIsCelebrationClosing] = useState(false);
             const [showSparkles, setShowSparkles] = useState(false);
@@ -332,7 +333,7 @@
                 const newVal = !historySettings[key];
                 const updated = { ...historySettings, [key]: newVal };
                 setHistorySettings(updated);
-                
+
                 if (adminMode) {
                     try {
                         const settingsRef = ref(db, 'settings/historyVisibility');
@@ -391,7 +392,7 @@
                 setIsAddingPoints(true);
                 setAddingPointsLabel(amount);
 
-                let amountNum = 0; 
+                let amountNum = 0;
                 try {
                     amountNum = parseInt(arabicToLatin(amount)) || 0;
                     if (!silent) await new Promise(resolve => setTimeout(resolve, 300));
@@ -450,76 +451,83 @@
                 }
             };
 
-            const spinWheel = (type) => {
-                if (wheelSpinning) return;
+            const spinWheel = async (type) => {
+                if (wheelSpinning || isAudioLoading) return;
 
-                const result = type === 'PUNISHMENT' 
+                const result = type === 'PUNISHMENT'
                     ? PUNISHMENTS[Math.floor(Math.random() * PUNISHMENTS.length)]
                     : REWARDS[Math.floor(Math.random() * REWARDS.length)];
 
-                setWheelResult(result);
-                setWheelSpinning(true);
-                setShowWheelResultOverlay(false);
-
-                const items = type === 'PUNISHMENT' ? PUNISHMENTS : REWARDS;
-                const resultIndex = items.indexOf(result);
-                const segmentAngle = 360 / items.length;
-                const extraSpins = 12;
-
-                // CRITICAL MATH FIX:
-                // We want resultIndex (at its current label position) to land at 0deg (Top).
-                // Label positions start at Index 0 = (angle/2)deg.
-                // Current relative label position = (wheelRotation + (i * angle) + angle/2) % 360.
-                // We want: (wheelRotation + deltaR + (i * angle) + angle/2) % 360 = 0.
-                // So deltaR % 360 = (360 - ((i * angle) + angle/2 + (wheelRotation % 360)) + 360) % 360.
-
-                const currentRotationMod = wheelRotation % 360;
-                const labelPosFromZero = (resultIndex * segmentAngle) + (segmentAngle / 2);
-                const deltaRotation = (360 - (labelPosFromZero + currentRotationMod) % 360 + 360) % 360;
-                const finalRotation = wheelRotation + deltaRotation + (extraSpins * 360);
-
-                setWheelRotation(finalRotation);
-
+                // Pre-load audio
+                setIsAudioLoading(true);
                 const soundFile = type === 'PUNISHMENT' ? './sounds/العقاب.mp3' : (result === 30 ? './sounds/المكافأة كبيرة.mp3' : './sounds/المكافأة.mp3');
-                const audio = new Audio(soundFile);
-                wheelAudioRef.current = audio;
-                audio.play().catch(e => console.log("Audio play failed", e));
 
-                // IF Result is 30, we trigger celebration at 8.5 seconds for perfect sync
-                if (type === 'REWARD' && result === 30) {
-                    setTimeout(() => {
-                        performAddPoints("30", currentUser, { silent: true, isWheel: true });
-                    }, 8500);
-                }
+                try {
+                    const audio = new Audio(soundFile);
+                    await new Promise((resolve, reject) => {
+                        audio.oncanplaythrough = resolve;
+                        audio.onerror = reject;
+                        // Timeout after 3 seconds if audio fails to load to not block interaction
+                        setTimeout(resolve, 3000);
+                    });
 
-                setTimeout(() => {
-                    setWheelSpinning(false);
-                    if (type === 'PUNISHMENT') {
-                        // Log the punishment to history with amount 0
-                        performAddPoints("0", currentUser, { 
-                            silent: true, 
-                            isWheel: true, 
-                            isPunishment: true, 
-                            noConfetti: true,
-                            noToast: true,
-                            note: result 
-                        });
-                        setShowWheelResultOverlay(true);
-                    } else if (type === 'REWARD') {
-                        if (result < 30) {
-                            performAddPoints(result.toString(), currentUser, { silent: true, isWheel: true });
-                            setShowWheelResultOverlay(true);
-                        } else {
-                            // Modal stays open so celebration is seen on top
-                            setTimeout(() => {
-                                setShowWheelModal(false);
-                                setActiveWheelType(null);
-                            }, 5000);
-                        }
-                    } else {
-                        setShowWheelResultOverlay(true);
+                    wheelAudioRef.current = audio;
+                    setIsAudioLoading(false);
+
+                    setWheelResult(result);
+                    setWheelSpinning(true);
+                    setShowWheelResultOverlay(false);
+
+                    const items = type === 'PUNISHMENT' ? PUNISHMENTS : REWARDS;
+                    const resultIndex = items.indexOf(result);
+                    const segmentAngle = 360 / items.length;
+                    const extraSpins = 12;
+
+                    const currentRotationMod = wheelRotation % 360;
+                    const labelPosFromZero = (resultIndex * segmentAngle) + (segmentAngle / 2);
+                    const deltaRotation = (360 - (labelPosFromZero + currentRotationMod) % 360 + 360) % 360;
+                    const finalRotation = wheelRotation + deltaRotation + (extraSpins * 360);
+
+                    setWheelRotation(finalRotation);
+                    audio.play().catch(e => console.log("Audio play failed", e));
+
+                    // IF Result is 30, we trigger celebration at 8.5 seconds for perfect sync
+                    if (type === 'REWARD' && result === 30) {
+                        setTimeout(() => {
+                            performAddPoints("30", currentUser, { silent: true, isWheel: true });
+                        }, 8500);
                     }
-                }, 9500);
+
+                    setTimeout(() => {
+                        setWheelSpinning(false);
+                        if (type === 'PUNISHMENT') {
+                            performAddPoints("0", currentUser, {
+                                silent: true,
+                                isWheel: true,
+                                isPunishment: true,
+                                noConfetti: true,
+                                noToast: true,
+                                note: result
+                            });
+                            setShowWheelResultOverlay(true);
+                        } else if (type === 'REWARD') {
+                            if (result < 30) {
+                                performAddPoints(result.toString(), currentUser, { silent: true, isWheel: true });
+                                setShowWheelResultOverlay(true);
+                            } else {
+                                // For +30, showing the result popup before the celebration animation fades out
+                                setTimeout(() => {
+                                    setShowWheelResultOverlay(true);
+                                }, 3000);
+                            }
+                        } else {
+                            setShowWheelResultOverlay(true);
+                        }
+                    }, 9500);
+                } catch (e) {
+                    console.error("Audio failed to load", e);
+                    setIsAudioLoading(false);
+                }
             };
 
             const performSaveJournal = async () => {
@@ -730,8 +738,8 @@
             };
 
             const Toggle = ({ label, active, onClick }) => (
-                <div 
-                    className="flex flex-col items-center gap-1.5 cursor-pointer select-none group" 
+                <div
+                    className="flex flex-col items-center gap-1.5 cursor-pointer select-none group"
                     onClick={onClick}
                 >
                     <span className="text-[10px] sm:text-[11px] font-bold text-snow/40 group-hover:text-snow/70 transition-colors uppercase tracking-widest leading-none">
@@ -962,25 +970,25 @@
                                         <div className={`grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto transition-all duration-500 ${achievementNote.trim().length === 0 ? 'grayscale opacity-50' : ''}`}>
                                             <button
                                                 disabled={isAddingPoints || achievementNote.trim().length === 0} onClick={() => addPoints(5)}
-                                                className="relative overflow-hidden py-8 rounded-2xl font-black text-3xl md:text-4xl transition-all shadow-lg text-snow flex items-center justify-center bg-verdigris hover:-translate-y-2 hover:shadow-[0_10px_30px_rgba(59,185,171,0.5)] active:scale-95 disabled:opacity-75 disabled:hover:translate-y-0 disabled:hover:shadow-none"
+                                                className="relative overflow-hidden py-8 rounded-[2.5rem] font-black text-3xl md:text-4xl transition-all shadow-lg text-snow flex items-center justify-center bg-verdigris hover:-translate-y-2 hover:shadow-[0_10px_30px_rgba(59,185,171,0.5)] active:scale-95 disabled:opacity-75 disabled:hover:translate-y-0 disabled:hover:shadow-none"
                                             >
                                                 {isAddingPoints && addingPointsLabel === 5 ? <div className="loader"></div> : '+5'}
                                             </button>
                                             <button
                                                 disabled={isAddingPoints || achievementNote.trim().length === 0} onClick={() => addPoints(10)}
-                                                className="relative overflow-hidden py-8 rounded-2xl font-black text-3xl md:text-4xl transition-all shadow-lg text-raisin flex items-center justify-center bg-saffron hover:-translate-y-2 hover:shadow-[0_10px_30px_rgba(244,200,43,0.5)] active:scale-95 disabled:opacity-75 disabled:hover:translate-y-0 disabled:hover:shadow-none"
+                                                className="relative overflow-hidden py-8 rounded-[2.5rem] font-black text-3xl md:text-4xl transition-all shadow-lg text-raisin flex items-center justify-center bg-saffron hover:-translate-y-2 hover:shadow-[0_10px_30px_rgba(244,200,43,0.5)] active:scale-95 disabled:opacity-75 disabled:hover:translate-y-0 disabled:hover:shadow-none"
                                             >
                                                 {isAddingPoints && addingPointsLabel === 10 ? <div className="loader !border-raisin !border-t-snow"></div> : '+10'}
                                             </button>
                                             <button
                                                 disabled={isAddingPoints || achievementNote.trim().length === 0} onClick={() => addPoints(20)}
-                                                className="relative overflow-hidden py-8 rounded-2xl font-black text-3xl md:text-4xl transition-all shadow-lg text-snow flex items-center justify-center bg-carmine hover:-translate-y-2 hover:shadow-[0_10px_30px_rgba(240,78,58,0.5)] active:scale-95 disabled:opacity-75 disabled:hover:translate-y-0 disabled:hover:shadow-none"
+                                                className="relative overflow-hidden py-8 rounded-[2.5rem] font-black text-3xl md:text-4xl transition-all shadow-lg text-snow flex items-center justify-center bg-carmine hover:-translate-y-2 hover:shadow-[0_10px_30px_rgba(240,78,58,0.5)] active:scale-95 disabled:opacity-75 disabled:hover:translate-y-0 disabled:hover:shadow-none"
                                             >
                                                 {isAddingPoints && addingPointsLabel === 20 ? <div className="loader"></div> : '+20'}
                                             </button>
                                             <button
                                                 disabled={isAddingPoints || achievementNote.trim().length === 0} onClick={() => addPoints(30)}
-                                                className="relative overflow-hidden py-8 rounded-2xl font-black text-3xl md:text-4xl transition-all shadow-lg text-snow flex items-center justify-center bg-spanish hover:-translate-y-2 hover:shadow-[0_10px_30px_rgba(8,111,182,0.5)] active:scale-95 disabled:opacity-75 disabled:hover:translate-y-0 disabled:hover:shadow-none"
+                                                className="relative overflow-hidden py-8 rounded-[2.5rem] font-black text-3xl md:text-4xl transition-all shadow-lg text-snow flex items-center justify-center bg-spanish hover:-translate-y-2 hover:shadow-[0_10px_30px_rgba(8,111,182,0.5)] active:scale-95 disabled:opacity-75 disabled:hover:translate-y-0 disabled:hover:shadow-none"
                                             >
                                                 {isAddingPoints && addingPointsLabel === 30 ? <div className="loader"></div> : '+30'}
                                             </button>
@@ -1010,7 +1018,7 @@
                                                             groupedGroups.push([p]);
                                                         }
                                                     });
-                                                    
+
                                                     return groupedGroups.map((group, index) => {
                                                         let medal = null;
                                                         let glow = '';
@@ -1052,7 +1060,7 @@
                                     {adminMode && (() => {
                                         const displayedHistory = historyLogs.filter(log => {
                                             const userMatch = historyFilterUser === "ALL" || log.user === historyFilterUser;
-                                            const typeMatch = 
+                                            const typeMatch =
                                                 (historySettings.showLogs && (!log.isWheel && log.amount === 0)) || // Journals
                                                 (historySettings.showPunishments && log.isPunishment) || // Wheel Punishments
                                                 (historySettings.showRewards && log.isWheel && !log.isPunishment) || // Wheel Rewards
@@ -1065,26 +1073,26 @@
                                                     <h2 className="text-3xl font-black text-snow drop-shadow-md mb-8">
                                                         📝 سجل الإنجازات
                                                     </h2>
-                                                    
+
                                                     <div className="flex flex-wrap items-center justify-center gap-4 w-full">
                                                         <div className="flex bg-darker/50 p-2 rounded-2xl shadow-[inset_0_2px_8px_rgba(0,0,0,0.5)] border-none outline-none grow sm:grow-0 justify-around sm:justify-center gap-6">
-                                                            <Toggle 
-                                                                label="السجلات" 
-                                                                active={historySettings.showLogs} 
-                                                                onClick={() => toggleHistorySetting('showLogs')} 
+                                                            <Toggle
+                                                                label="السجلات"
+                                                                active={historySettings.showLogs}
+                                                                onClick={() => toggleHistorySetting('showLogs')}
                                                             />
-                                                            <Toggle 
-                                                                label="العقاب" 
-                                                                active={historySettings.showPunishments} 
-                                                                onClick={() => toggleHistorySetting('showPunishments')} 
+                                                            <Toggle
+                                                                label="العقاب"
+                                                                active={historySettings.showPunishments}
+                                                                onClick={() => toggleHistorySetting('showPunishments')}
                                                             />
-                                                            <Toggle 
-                                                                label="المكافأة" 
-                                                                active={historySettings.showRewards} 
-                                                                onClick={() => toggleHistorySetting('showRewards')} 
+                                                            <Toggle
+                                                                label="المكافأة"
+                                                                active={historySettings.showRewards}
+                                                                onClick={() => toggleHistorySetting('showRewards')}
                                                             />
                                                         </div>
-                                                        
+
                                                         <select
                                                             value={historyFilterUser}
                                                             onChange={(e) => setHistoryFilterUser(e.target.value)}
@@ -1283,18 +1291,18 @@
                                     ) : (
                                         historyLogs.filter(log => log.user === currentUser && !log.isPunishment).map(log => (
                                             <div key={log.id} className="flex flex-col p-4 rounded-xl bg-darker/60 border border-snow/5 hover:border-spanish/30 transition-colors">
-                                                        <div className="flex justify-between items-start mb-2 gap-4">
-                                                            <div className="flex items-center gap-2 flex-wrap">
-                                                                <span className="text-sm shadow-sm text-snow/70 bg-darker/80 px-3 py-1 rounded-full whitespace-nowrap">
-                                                                    {new Date(log.timestamp).toLocaleString('ar-EG', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                                                                </span>
-                                                                {log.isWheel && (
-                                                                    <span className="bg-saffron/10 border border-saffron/30 text-saffron text-[10px] px-2 py-1 rounded-full font-black">
-                                                                        دائرة الحظ 🎡
-                                                                    </span>
-                                                                )}
-                                                            </div>
-                                                            <div className="flex items-center gap-2">
+                                                <div className="flex justify-between items-start mb-2 gap-4">
+                                                    <div className="flex items-center gap-2 flex-wrap">
+                                                        <span className="text-sm shadow-sm text-snow/70 bg-darker/80 px-3 py-1 rounded-full whitespace-nowrap">
+                                                            {new Date(log.timestamp).toLocaleString('ar-EG', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                                        </span>
+                                                        {log.isWheel && (
+                                                            <span className="bg-saffron/10 border border-saffron/30 text-saffron text-[10px] px-2 py-1 rounded-full font-black">
+                                                                دائرة الحظ 🎡
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    <div className="flex items-center gap-2">
                                                         {log.amount > 0 ? (
                                                             <div className="inline-block bg-verdigris/20 border border-verdigris text-verdigris font-black text-xs px-2 py-0.5 rounded shadow">
                                                                 +{log.amount} نقطة
@@ -1604,10 +1612,10 @@
                                                     const isPunishment = arr.length > 5;
                                                     const spokeRotation = i * angle + (angle / 2);
                                                     return (
-                                                        <div 
+                                                        <div
                                                             key={i}
                                                             className="absolute top-0 left-1/2 -translate-x-1/2 h-1/2 origin-bottom flex flex-col items-center justify-start"
-                                                            style={{ 
+                                                            style={{
                                                                 transform: `rotate(${spokeRotation}deg)`,
                                                                 width: '1px' // Absolute center line
                                                             }}
@@ -1622,12 +1630,14 @@
 
                                             {/* Center Button */}
                                             <button
-                                                disabled={wheelSpinning}
+                                                disabled={wheelSpinning || isAudioLoading}
                                                 onClick={() => spinWheel(activeWheelType)}
                                                 className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-20 h-20 bg-darker rounded-full z-30 flex items-center justify-center border-4 ${activeWheelType === 'PUNISHMENT' ? 'border-carmine' : 'border-verdigris'} shadow-xl group disabled:opacity-50`}
                                             >
                                                 <div className={`w-16 h-16 rounded-full flex items-center justify-center text-white font-black text-xl transition-transform group-hover:scale-110 ${activeWheelType === 'PUNISHMENT' ? 'bg-carmine shadow-[0_0_20px_rgba(240,78,58,0.5)]' : 'bg-verdigris shadow-[0_0_20px_rgba(31,168,161,0.5)]'}`}>
-                                                    {wheelSpinning ? '...' : 'لف'}
+                                                    {isAudioLoading ? (
+                                                        <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                                                    ) : wheelSpinning ? '...' : 'لف'}
                                                 </div>
                                             </button>
                                         </div>
@@ -1649,6 +1659,7 @@
                                                     {activeWheelType === 'PUNISHMENT' ? wheelResult : `لقد حصلت على +${wheelResult} نقطة!`}
                                                 </p>
                                             </div>
+                                            <p className="text-snow/50 text-sm mb-6 font-medium animate-pulse">قم بالتقاط الشاشة وارسلها للمشرف 📸</p>
                                             <button
                                                 onClick={() => { setShowWheelModal(false); setShowWheelResultOverlay(false); setActiveWheelType(null); }}
                                                 className={`w-full py-4 rounded-xl font-black text-xl transition-all shadow-lg ${activeWheelType === 'PUNISHMENT' ? 'bg-darker text-snow border border-carmine hover:bg-carmine' : 'bg-verdigris text-darker hover:bg-teal-400'}`}

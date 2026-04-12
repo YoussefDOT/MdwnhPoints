@@ -15,6 +15,9 @@ module.exports = {
             spanish: '#086fb6',
             darker: '#1a1a1a'
         },
+        transitionTimingFunction: {
+            spring: 'cubic-bezier(0.175, 0.885, 0.32, 1.275)',
+        },
         keyframes: {
             blob: {
                 "0%": { transform: "translate(0px, 0px) scale(1)" },

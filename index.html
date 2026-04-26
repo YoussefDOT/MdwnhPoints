@@ -216,7 +216,10 @@
                 return String(str).replace(/[٠-٩]/g, (mat) => map[mat]);
             };
             const [historyFilterUser, setHistoryFilterUser] = useState("ALL");
-            const [historySettings, setHistorySettings] = useState({ showLogs: true, showPunishments: true, showRewards: true });
+            const [historySettings, setHistorySettings] = useState({ showLogs: true, showPunishments: true, showRewards: true, showManualPoints: true });
+
+            const [globalPasswordsEnabled, setGlobalPasswordsEnabled] = useState(true);
+            const [showMemberSelectOverlay, setShowMemberSelectOverlay] = useState(null); // 'history' or 'target'
 
             const [celebration, setCelebration] = useState(null);
             const [isCelebrationClosing, setIsCelebrationClosing] = useState(false);
@@ -256,7 +259,13 @@
                     setHistoryLogs(parsedHistory);
                 });
 
-                return () => { unsubscribe(); hUnsubscribe(); };
+                const settingsRef = ref(db, 'settings/passwordsEnabled');
+                const sUnsubscribe = onValue(settingsRef, (snapshot) => {
+                    const val = snapshot.val();
+                    setGlobalPasswordsEnabled(val === null ? true : val);
+                });
+
+                return () => { unsubscribe(); hUnsubscribe(); sUnsubscribe(); };
             }, [db]);
 
             // Reset scroll to top when changing "pages" (user/admin login/logout)
@@ -266,6 +275,11 @@
 
             // Member password system
             const selectUser = async (name) => {
+                if (!globalPasswordsEnabled) {
+                    finishMemberLogin(name);
+                    return;
+                }
+                
                 setIsMemberPasswordLoading(true);
                 setPendingUser(name);
                 try {
@@ -329,17 +343,20 @@
                 }, 3000);
             };
 
-            const toggleHistorySetting = async (key) => {
-                const newVal = !historySettings[key];
-                const updated = { ...historySettings, [key]: newVal };
-                setHistorySettings(updated);
+            const toggleHistorySetting = (key) => {
+                setHistorySettings(prev => ({ ...prev, [key]: !prev[key] }));
+            };
 
+            const togglePasswordsEnabled = async () => {
+                const newVal = !globalPasswordsEnabled;
+                setGlobalPasswordsEnabled(newVal); // Optimistic update
                 if (adminMode) {
                     try {
-                        const settingsRef = ref(db, 'settings/historyVisibility');
-                        await set(settingsRef, updated);
+                        const settingsRef = ref(db, 'settings/passwordsEnabled');
+                        await set(settingsRef, newVal);
                     } catch (e) {
-                        console.error("Failed to sync settings:", e);
+                        console.error("Failed to sync password settings:", e);
+                        setGlobalPasswordsEnabled(!newVal); // Revert on fail
                     }
                 }
             };
@@ -714,12 +731,16 @@
 
                 try {
                     const playerRef = ref(db, `players/${person}`);
+                    const snapshot = await get(playerRef);
+                    const currentData = snapshot.val() || {};
+
                     await set(playerRef, {
+                        ...currentData,
                         totalPoints: parseInt(manualTargetPoints, 10),
                         lastUpdated: serverTimestamp()
                     });
 
-                    playPointAudio(30);
+                    playPointAudio(5); // Plays sounds/1.mp3
                     showToast("تم تعيين النقاط بنجاح!");
                     setManualTargetPoints("");
 
@@ -737,7 +758,7 @@
                 performAddPoints(amount, person);
             };
 
-            const Toggle = ({ label, active, onClick }) => (
+            const Toggle = ({ label, active, onClick, colorClass = "bg-verdigris", shadowColor = "31,168,161" }) => (
                 <div
                     className="flex flex-col items-center gap-1.5 cursor-pointer select-none group"
                     onClick={onClick}
@@ -745,8 +766,9 @@
                     <span className="text-[10px] sm:text-[11px] font-bold text-snow/40 group-hover:text-snow/70 transition-colors uppercase tracking-widest leading-none">
                         {label}
                     </span>
-                    <div className={`w-11 h-6 rounded-full p-1 transition-all duration-300 flex items-center shadow-lg ${active ? 'bg-verdigris shadow-[0_0_20px_rgba(31,168,161,0.4)]' : 'bg-darker border border-white/10'}`}>
-                        <div className={`w-4 h-4 rounded-full bg-white shadow-md toggle-dot transform transition-all duration-300 ${active ? 'translate-x-5' : 'translate-x-0'}`}></div>
+                    <div className={`flex items-center w-11 h-6 rounded-full p-1 transition-colors duration-300 shadow-lg ${active ? colorClass : 'bg-darker border border-white/10'}`}
+                         style={active ? { boxShadow: `0 0 20px rgba(${shadowColor},0.4)` } : {}}>
+                        <div className={`w-4 h-4 rounded-full bg-white shadow-md transform transition-transform duration-300 ${active ? 'translate-x-0' : '-translate-x-5'}`}></div>
                     </div>
                 </div>
             );
@@ -920,16 +942,13 @@
                                                 إدارة الأعضاء (صلاحية القائد)
                                             </h2>
                                             <div className="flex flex-col md:flex-row gap-4">
-                                                <select
-                                                    value={targetUser || ""}
-                                                    onChange={(e) => setTargetUser(e.target.value)}
-                                                    className="flex-1 bg-darker text-snow border border-snow/10 rounded-xl px-4 py-4 focus:outline-none focus:border-spanish font-bold text-lg appearance-none cursor-pointer"
+                                                <button
+                                                    onClick={() => setShowMemberSelectOverlay('target')}
+                                                    className="flex-1 bg-darker text-snow border border-snow/10 rounded-xl px-6 py-4 hover:bg-darker/80 transition-colors focus:outline-none focus:border-spanish font-bold text-lg text-right flex items-center justify-between shadow-inner"
                                                 >
-                                                    <option value="" disabled>اختر العضو...</option>
-                                                    {MEMBERS.map(name => (
-                                                        <option key={name} value={name}>{name}</option>
-                                                    ))}
-                                                </select>
+                                                    <span>{targetUser || "اختر العضو..."}</span>
+                                                    <span className="text-snow/40 text-sm">▼</span>
+                                                </button>
 
                                                 <div className="flex gap-2">
                                                     <input
@@ -997,6 +1016,16 @@
                                 </div>
 
                                 {/* Dashboard Boards */}
+                                {adminMode && (
+                                    <div className="flex justify-center mb-6 max-w-7xl mx-auto">
+                                        <button 
+                                            onClick={togglePasswordsEnabled}
+                                            className={`px-8 py-3 rounded-full font-black text-sm transition-all shadow-lg border ${globalPasswordsEnabled ? 'bg-carmine/20 text-carmine border-carmine/30 hover:bg-carmine hover:text-darker hover:shadow-[0_0_20px_rgba(240,78,58,0.5)]' : 'bg-verdigris/20 text-verdigris border-verdigris/30 hover:bg-verdigris hover:text-darker hover:shadow-[0_0_20px_rgba(31,168,161,0.5)]'}`}
+                                        >
+                                            {globalPasswordsEnabled ? 'إيقاف كلمات المرور' : 'تشغيل كلمات المرور'}
+                                        </button>
+                                    </div>
+                                )}
                                 <div className={adminMode ? "grid grid-cols-1 md:grid-cols-2 gap-8 max-w-7xl mx-auto mb-8" : "glass-panel p-6 sm:p-10 mb-8 max-w-5xl mx-auto"}>
 
                                     {/* Right Side: Leaderboard */}
@@ -1064,7 +1093,7 @@
                                                 (historySettings.showLogs && (!log.isWheel && log.amount === 0)) || // Journals
                                                 (historySettings.showPunishments && log.isPunishment) || // Wheel Punishments
                                                 (historySettings.showRewards && log.isWheel && !log.isPunishment) || // Wheel Rewards
-                                                (!log.isWheel && log.amount > 0); // Manual points (Always show)
+                                                (historySettings.showManualPoints && !log.isWheel && log.amount > 0); // Manual points
                                             return userMatch && typeMatch;
                                         });
                                         return (
@@ -1074,35 +1103,41 @@
                                                         📝 سجل الإنجازات
                                                     </h2>
 
-                                                    <div className="flex flex-wrap items-center justify-center gap-4 w-full">
-                                                        <div className="flex bg-darker/50 p-2 rounded-2xl shadow-[inset_0_2px_8px_rgba(0,0,0,0.5)] border-none outline-none grow sm:grow-0 justify-around sm:justify-center gap-6">
+                                                    <div className="flex flex-col items-center w-full gap-4">
+                                                        <div className="flex bg-darker/50 p-2 rounded-2xl shadow-[inset_0_2px_8px_rgba(0,0,0,0.5)] border-none outline-none justify-around sm:justify-center gap-6">
                                                             <Toggle
                                                                 label="السجلات"
                                                                 active={historySettings.showLogs}
                                                                 onClick={() => toggleHistorySetting('showLogs')}
+                                                                colorClass="bg-verdigris" shadowColor="31,168,161"
                                                             />
                                                             <Toggle
                                                                 label="العقاب"
                                                                 active={historySettings.showPunishments}
                                                                 onClick={() => toggleHistorySetting('showPunishments')}
+                                                                colorClass="bg-carmine" shadowColor="240,78,58"
                                                             />
                                                             <Toggle
                                                                 label="المكافأة"
                                                                 active={historySettings.showRewards}
                                                                 onClick={() => toggleHistorySetting('showRewards')}
+                                                                colorClass="bg-saffron" shadowColor="244,200,43"
+                                                            />
+                                                            <Toggle
+                                                                label="إنجازات"
+                                                                active={historySettings.showManualPoints}
+                                                                onClick={() => toggleHistorySetting('showManualPoints')}
+                                                                colorClass="bg-spanish" shadowColor="8,111,182"
                                                             />
                                                         </div>
 
-                                                        <select
-                                                            value={historyFilterUser}
-                                                            onChange={(e) => setHistoryFilterUser(e.target.value)}
-                                                            className="bg-darker/60 text-snow border border-snow/10 rounded-xl px-4 py-2 focus:outline-none focus:border-saffron font-bold text-sm w-full sm:w-auto shadow-inner h-[52px]"
+                                                        <button
+                                                            onClick={() => setShowMemberSelectOverlay('history')}
+                                                            className="bg-darker/60 text-snow border border-snow/10 rounded-xl px-6 py-3 hover:bg-darker transition-colors focus:outline-none focus:border-saffron font-bold text-sm w-full sm:w-auto shadow-inner flex items-center justify-between gap-3 min-w-[150px]"
                                                         >
-                                                            <option value="ALL">عرض الكل</option>
-                                                            {MEMBERS.map(name => (
-                                                                <option key={name} value={name}>{name}</option>
-                                                            ))}
-                                                        </select>
+                                                            <span>{historyFilterUser === 'ALL' ? 'عرض الكل' : historyFilterUser}</span>
+                                                            <span className="text-snow/40 text-[10px]">▼</span>
+                                                        </button>
                                                     </div>
                                                 </div>
 
@@ -1667,6 +1702,53 @@
                                         </div>
                                     </div>
                                 )}
+                            </div>
+                        </div>
+                    )}
+                    {/* Member Select Overlay */}
+                    {showMemberSelectOverlay && (
+                        <div className="fixed inset-0 z-[400] flex flex-col bg-black/90 backdrop-blur-xl animate-[fadeIn_0.2s_ease-out] overflow-y-auto">
+                            <div className="sticky top-0 p-6 flex justify-between items-center bg-gradient-to-b from-black/80 to-transparent z-10">
+                                <h2 className="text-2xl font-black text-snow drop-shadow-md">
+                                    {showMemberSelectOverlay === 'history' ? 'اختر عضواً لعرض سجله' : 'اختر العضو للإدارة'}
+                                </h2>
+                                <button 
+                                    onClick={() => setShowMemberSelectOverlay(null)} 
+                                    className="w-10 h-10 flex items-center justify-center rounded-full bg-snow/10 hover:bg-carmine text-snow font-black transition-colors"
+                                >✕</button>
+                            </div>
+                            <div className="p-6 max-w-4xl mx-auto w-full pb-20">
+                                {showMemberSelectOverlay === 'history' && (
+                                    <button
+                                        onClick={() => { setHistoryFilterUser("ALL"); setShowMemberSelectOverlay(null); }}
+                                        className="w-full mb-6 py-4 bg-darker/80 hover:bg-spanish border-2 border-spanish/50 rounded-2xl text-snow font-black text-xl transition-all shadow-lg"
+                                    >
+                                        عرض الكل
+                                    </button>
+                                )}
+                                <div className="flex flex-wrap justify-center gap-4 sm:gap-6">
+                                    {MEMBERS.map((name) => (
+                                        <button
+                                            key={name}
+                                            onClick={() => {
+                                                if (showMemberSelectOverlay === 'history') {
+                                                    setHistoryFilterUser(name);
+                                                } else {
+                                                    setTargetUser(name);
+                                                }
+                                                setShowMemberSelectOverlay(null);
+                                            }}
+                                            className="group flex flex-col items-center gap-2 transition-transform hover:-translate-y-1 active:scale-95"
+                                        >
+                                            <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full border-[3px] border-darker bg-darker overflow-hidden group-hover:border-saffron transition-colors shadow-lg">
+                                                <img src={`./MdwnhMembers/${name}.png`} alt={name} className="w-full h-full object-cover" loading="lazy" />
+                                            </div>
+                                            <span className="text-snow font-bold text-sm tracking-wide bg-darker/80 px-4 py-1.5 rounded-full group-hover:bg-saffron group-hover:text-darker transition-colors">
+                                                {name}
+                                            </span>
+                                        </button>
+                                    ))}
+                                </div>
                             </div>
                         </div>
                     )}

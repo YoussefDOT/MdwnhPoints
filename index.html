@@ -1104,7 +1104,7 @@
                                             />
                                         </div>
 
-                                        <div className={`grid grid-cols-2 md:grid-cols-5 gap-4 max-w-5xl mx-auto transition-all duration-500 ${achievementNote.trim().length === 0 ? 'grayscale opacity-50' : ''}`}>
+                                        <div className={`grid grid-cols-3 md:grid-cols-5 gap-4 max-w-5xl mx-auto transition-all duration-500 ${achievementNote.trim().length === 0 ? 'grayscale opacity-50' : ''}`}>
                                             <button
                                                 disabled={isAddingPoints || special60.isActive || achievementNote.trim().length === 0} onClick={() => addPoints(5)}
                                                 className="relative overflow-hidden py-8 rounded-[2.5rem] font-black text-3xl md:text-4xl transition-all shadow-lg text-snow flex items-center justify-center bg-verdigris hover:-translate-y-2 hover:shadow-[0_10px_30px_rgba(59,185,171,0.5)] active:scale-95 disabled:opacity-75 disabled:hover:translate-y-0 disabled:hover:shadow-none"
@@ -1131,7 +1131,7 @@
                                             </button>
                                             <button
                                                 disabled={isAddingPoints || special60.isActive || achievementNote.trim().length === 0} onClick={() => addPoints(60)}
-                                                className="relative overflow-hidden py-8 rounded-[2.5rem] font-black text-3xl md:text-4xl transition-all shadow-lg text-snow flex items-center justify-center bg-[#8a7ee2] hover:-translate-y-2 hover:shadow-[0_10px_40px_rgba(138,126,226,0.7)] active:scale-95 disabled:opacity-75 disabled:hover:translate-y-0 disabled:hover:shadow-none flex-1"
+                                                className="relative overflow-hidden py-8 rounded-[2.5rem] font-black text-3xl md:text-4xl transition-all shadow-lg text-snow flex items-center justify-center bg-[#8a7ee2] hover:-translate-y-2 hover:shadow-[0_10px_40px_rgba(138,126,226,0.7)] active:scale-95 disabled:opacity-75 disabled:hover:translate-y-0 disabled:hover:shadow-none col-span-2 md:col-span-1"
                                             >
                                                 {isAddingPoints && addingPointsLabel === 60 ? <div className="loader"></div> : '+60'}
                                             </button>

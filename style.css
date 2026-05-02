@@ -1394,7 +1394,7 @@ video {
 
 @keyframes crownSnap {
   0% {
-    transform: translateY(80px);
+    transform: translateY(200px);
   }
 
   100% {
@@ -1416,7 +1416,7 @@ video {
   }
 
   100% {
-    transform: translateX(-50%) translateY(0);
+    transform: translateX(-50%) translateY(8px);
   }
 }
 

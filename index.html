@@ -1031,22 +1031,22 @@
                                             </div>
                                         )}
                                     </div>
-                                    <div className="flex flex-wrap gap-2 justify-end">
+                                    <div className="flex flex-wrap gap-2 justify-center sm:justify-end">
                                         {!adminMode && (
                                             <>
                                                 <button
                                                     onClick={() => setShowWheelModal(true)}
-                                                    className="px-5 py-2 bg-darker text-verdigris border border-verdigris/30 hover:bg-verdigris hover:text-darker hover:shadow-[0_0_20px_rgba(31,168,161,0.5)] rounded-full font-bold transition-all duration-300 text-sm shadow-[0_0_10px_rgba(31,168,161,0.2)] flex items-center gap-2"
+                                                    className="px-3 py-1.5 sm:px-5 sm:py-2 bg-darker text-verdigris border border-verdigris/30 hover:bg-verdigris hover:text-darker hover:shadow-[0_0_20px_rgba(31,168,161,0.5)] rounded-full font-bold transition-all duration-300 text-xs sm:text-sm shadow-[0_0_10px_rgba(31,168,161,0.2)] flex items-center gap-2"
                                                 >
                                                     <span>🎡</span>
                                                     دوائر الحظ
                                                 </button>
-                                                <button onClick={() => setShowJournalModal(true)} className="px-5 py-2 bg-darker text-saffron border border-saffron/30 hover:bg-saffron hover:text-darker hover:shadow-[0_0_20px_rgba(244,200,43,0.5)] rounded-full font-bold transition-all duration-300 text-sm shadow-[0_0_10px_rgba(244,200,43,0.2)]">
+                                                <button onClick={() => setShowJournalModal(true)} className="px-3 py-1.5 sm:px-5 sm:py-2 bg-darker text-saffron border border-saffron/30 hover:bg-saffron hover:text-darker hover:shadow-[0_0_20px_rgba(244,200,43,0.5)] rounded-full font-bold transition-all duration-300 text-xs sm:text-sm shadow-[0_0_10px_rgba(244,200,43,0.2)]">
                                                     أعمالي السابقة
                                                 </button>
                                             </>
                                         )}
-                                        <button onClick={logout} className="px-5 py-2 bg-darker hover:bg-carmine text-snow rounded-full font-bold transition-colors text-sm shadow-md">
+                                        <button onClick={logout} className="px-3 py-1.5 sm:px-5 sm:py-2 bg-darker hover:bg-carmine text-snow rounded-full font-bold transition-colors text-xs sm:text-sm shadow-md">
                                             تسجيل الخروج
                                         </button>
                                     </div>
@@ -1131,7 +1131,7 @@
                                             </button>
                                             <button
                                                 disabled={isAddingPoints || special60.isActive || achievementNote.trim().length === 0} onClick={() => addPoints(60)}
-                                                className="relative overflow-hidden py-8 rounded-[2.5rem] font-black text-3xl md:text-4xl transition-all shadow-lg text-snow flex items-center justify-center bg-[#8a7ee2] hover:-translate-y-2 hover:shadow-[0_10px_40px_rgba(138,126,226,0.7)] active:scale-95 disabled:opacity-75 disabled:hover:translate-y-0 disabled:hover:shadow-none"
+                                                className="relative overflow-hidden py-8 rounded-[2.5rem] font-black text-3xl md:text-4xl transition-all shadow-lg text-snow flex items-center justify-center bg-[#8a7ee2] hover:-translate-y-2 hover:shadow-[0_10px_40px_rgba(138,126,226,0.7)] active:scale-95 disabled:opacity-75 disabled:hover:translate-y-0 disabled:hover:shadow-none flex-1"
                                             >
                                                 {isAddingPoints && addingPointsLabel === 60 ? <div className="loader"></div> : '+60'}
                                             </button>

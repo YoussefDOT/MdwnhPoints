@@ -812,8 +812,19 @@
                         audio.onplay = () => {
                             setSpecial60(prev => ({ ...prev, phase: 'black1' }));
                             
-                            setTimeout(() => setSpecial60(prev => ({ ...prev, phase: 'crown' })), 3700);
-                            setTimeout(() => setSpecial60(prev => ({ ...prev, phase: 'black2' })), 6700);
+                            // Preload crown scene assets during blackout
+                            const crownImg = new Image();
+                            crownImg.src = './Crown.png';
+                            const bgImg = new Image();
+                            bgImg.src = './Background.png';
+                            
+                            setTimeout(() => setSpecial60(prev => ({ ...prev, phase: 'crown' })), 3500);
+                            setTimeout(() => setSpecial60(prev => ({ ...prev, phase: 'black2' })), 6500);
+                            // Preload gold crown during black2 phase (crown appears at 11800ms, so this gives 5.3s to load)
+                            setTimeout(() => {
+                                const goldCrownImg = new Image();
+                                goldCrownImg.src = './GoldCrown.png';
+                            }, 6500);
                             setTimeout(() => {
                                 setSpecial60(prev => ({ ...prev, phase: 'celebration' }));
                                 triggerConfetti(60); 
@@ -827,8 +838,9 @@
                                 });
                                 setSparklePositions(newSparkles);
                                 setShowSparkles(true);
+                                
                                 // Crown falls on avatar at exactly 12 seconds
-                                setTimeout(() => setSpecial60(prev => ({ ...prev, showAvatarCrown: true, cameraShake: true })), 2500);
+                                setTimeout(() => setSpecial60(prev => ({ ...prev, showAvatarCrown: true, cameraShake: true })), 2300);
                                 setTimeout(() => {
                                     setSpecial60(prev => ({ ...prev, showContinue: true }));
                                     setIsAddingPoints(false);

@@ -371,6 +371,11 @@
                 localStorage.removeItem("mdwnh_user");
             };
 
+            const getFirstName = (name) => {
+                if (name === "أبو بندر") return "أبو بندر";
+                return name.split(' ')[0];
+            };
+
             const attemptAdminLogin = (e) => {
                 e.preventDefault();
                 if (passwordInput === "144noon") {
@@ -1962,7 +1967,7 @@
                                         </div>
 
                                         <h2 className="text-4xl sm:text-6xl font-black text-white mb-4 drop-shadow-lg animate-explosiveIn">نقطة ألماااسية!!!</h2>
-                                        <p className="text-xl sm:text-2xl text-snow/90 mb-6 drop-shadow-md animate-[slideUpFade_1s_ease-out_0.2s_both]">نشكركم على جهدكم 🤍</p>
+                                        <p className="text-xl sm:text-2xl text-snow/90 mb-6 drop-shadow-md animate-[slideUpFade_1s_ease-out_0.2s_both]">جزيت خيرًا يا {getFirstName(special60.user)} 🤍</p>
                                     </div>
 
                                     {/* White Sparkles Overlay */}

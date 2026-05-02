@@ -95,7 +95,7 @@
             "سجل أو أكتب كملة تحفيزية لأعضاء"
         ];
 
-        const REWARDS = [5, 10, 20, 30];
+        const REWARDS = [5, 10, 20, 30, 60];
 
         // Premium Audio System for Rewards
         const playPointAudio = (points) => {
@@ -228,6 +228,7 @@
             const [isPageSuckingIn, setIsPageSuckingIn] = useState(false);
             const [pointsPopAnim, setPointsPopAnim] = useState(false);
 
+            const [special60, setSpecial60] = useState({ isActive: false, phase: null, showContinue: false, user: null });
             const [toast, setToast] = useState(null); // { message, visible }
             const [dbError, setDbError] = useState(null);
 
@@ -240,7 +241,9 @@
                 const unsubscribe = onValue(playersRef, (snapshot) => {
                     setDbError(null);
                     const data = snapshot.val() || {};
-                    const parsedPlayers = Object.entries(data).map(([name, info]) => ({
+                    const parsedPlayers = Object.entries(data)
+                        .filter(([name]) => name !== "سراج")
+                        .map(([name, info]) => ({
                         name,
                         points: info.totalPoints || 0
                     })).sort((a, b) => b.points - a.points);
@@ -424,15 +427,18 @@
                         lastUpdated: serverTimestamp()
                     });
 
-                    const historyDbRef = ref(db, 'history');
-                    await push(historyDbRef, {
-                        user: person,
-                        amount: amountNum,
-                        note: options.note || achievementNote || (options.isWheel ? (options.isPunishment ? "دائرة العقاب" : "دائرة المكافأة") : ""),
-                        timestamp: Date.now(),
-                        isWheel: options.isWheel || false,
-                        isPunishment: options.isPunishment || false
-                    });
+                    // Skip history logs for سراج
+                    if (person !== "سراج") {
+                        const historyDbRef = ref(db, 'history');
+                        await push(historyDbRef, {
+                            user: person,
+                            amount: amountNum,
+                            note: options.note || achievementNote || (options.isWheel ? (options.isPunishment ? "دائرة العقاب" : "دائرة المكافأة") : ""),
+                            timestamp: Date.now(),
+                            isWheel: options.isWheel || false,
+                            isPunishment: options.isPunishment || false
+                        });
+                    }
 
                     const shouldConfetti = !silent && !noConfetti;
 
@@ -755,7 +761,102 @@
             const addPoints = (amount) => {
                 const person = adminMode && targetUser ? targetUser : currentUser;
                 if (!person) return;
-                performAddPoints(amount, person);
+                
+                if (amount === 60) {
+                    setIsAddingPoints(true);
+                    setAddingPointsLabel(60);
+                    
+                    // Guaranteed minimum delay to show loading state (like other buttons)
+                    setTimeout(() => {
+                        setSpecial60({ isActive: true, phase: 'loading', showContinue: false, showAvatarCrown: false, cameraShake: false, user: person });
+                        
+                        // Add points immediately
+                        const add60PointsToDb = async () => {
+                            try {
+                                const playerRef = ref(db, `players/${person}`);
+                                const snapshot = await get(playerRef);
+                                const currentData = snapshot.val() || { totalPoints: 0 };
+
+                                await set(playerRef, {
+                                    ...currentData,
+                                    totalPoints: (currentData.totalPoints || 0) + 60,
+                                    lastUpdated: serverTimestamp()
+                                });
+
+                                // Skip history logs for سراج
+                                if (person !== "سراج") {
+                                    const historyDbRef = ref(db, 'history');
+                                    await push(historyDbRef, {
+                                        user: person,
+                                        amount: 60,
+                                        note: achievementNote || "",
+                                        timestamp: Date.now(),
+                                        isWheel: false,
+                                        isPunishment: false
+                                    });
+                                }
+                                setAchievementNote("");
+                            } catch (error) {
+                                console.error("Failed to add 60 points", error);
+                            }
+                        };
+                        add60PointsToDb();
+
+                        const audio = new Audio('./sounds/5.mp3');
+                        audio.volume = 0.5;
+                        
+                        const startAnimation = () => {
+                            audio.play().catch(e => console.log("Audio play error", e));
+                        };
+                        
+                        audio.onplay = () => {
+                            setSpecial60(prev => ({ ...prev, phase: 'black1' }));
+                            
+                            setTimeout(() => setSpecial60(prev => ({ ...prev, phase: 'crown' })), 3700);
+                            setTimeout(() => setSpecial60(prev => ({ ...prev, phase: 'black2' })), 6700);
+                            setTimeout(() => {
+                                setSpecial60(prev => ({ ...prev, phase: 'celebration' }));
+                                triggerConfetti(60); 
+                                const newSparkles = [...Array(40)].map(() => {
+                                    let top, left;
+                                    do {
+                                        top = Math.random() * 100;
+                                        left = Math.random() * 100;
+                                    } while (Math.sqrt(Math.pow(top - 50, 2) + Math.pow(left - 50, 2)) < 30);
+                                    return { top, left, delay: Math.random() * 0.5, speed: 2.5 + Math.random() * 2 };
+                                });
+                                setSparklePositions(newSparkles);
+                                setShowSparkles(true);
+                                // Crown falls on avatar at exactly 12 seconds
+                                setTimeout(() => setSpecial60(prev => ({ ...prev, showAvatarCrown: true, cameraShake: true })), 2500);
+                                setTimeout(() => {
+                                    setSpecial60(prev => ({ ...prev, showContinue: true }));
+                                    setIsAddingPoints(false);
+                                    setAddingPointsLabel(null);
+                                }, 8500);
+                            }, 9500);
+                        };
+
+                        let hasStarted = false;
+                        audio.oncanplaythrough = () => {
+                            if (!hasStarted) {
+                                hasStarted = true;
+                                startAnimation();
+                            }
+                        };
+                        
+                        // Fallback in case audio doesn't fire event quickly
+                        setTimeout(() => {
+                            if (!hasStarted) {
+                                hasStarted = true;
+                                startAnimation();
+                            }
+                        }, 3000);
+                    }, 800);
+                    
+                } else {
+                    performAddPoints(amount, person);
+                }
             };
 
             const Toggle = ({ label, active, onClick, colorClass = "bg-verdigris", shadowColor = "31,168,161" }) => (
@@ -986,30 +1087,36 @@
                                             />
                                         </div>
 
-                                        <div className={`grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto transition-all duration-500 ${achievementNote.trim().length === 0 ? 'grayscale opacity-50' : ''}`}>
+                                        <div className={`grid grid-cols-2 md:grid-cols-5 gap-4 max-w-5xl mx-auto transition-all duration-500 ${achievementNote.trim().length === 0 ? 'grayscale opacity-50' : ''}`}>
                                             <button
-                                                disabled={isAddingPoints || achievementNote.trim().length === 0} onClick={() => addPoints(5)}
+                                                disabled={isAddingPoints || special60.isActive || achievementNote.trim().length === 0} onClick={() => addPoints(5)}
                                                 className="relative overflow-hidden py-8 rounded-[2.5rem] font-black text-3xl md:text-4xl transition-all shadow-lg text-snow flex items-center justify-center bg-verdigris hover:-translate-y-2 hover:shadow-[0_10px_30px_rgba(59,185,171,0.5)] active:scale-95 disabled:opacity-75 disabled:hover:translate-y-0 disabled:hover:shadow-none"
                                             >
                                                 {isAddingPoints && addingPointsLabel === 5 ? <div className="loader"></div> : '+5'}
                                             </button>
                                             <button
-                                                disabled={isAddingPoints || achievementNote.trim().length === 0} onClick={() => addPoints(10)}
+                                                disabled={isAddingPoints || special60.isActive || achievementNote.trim().length === 0} onClick={() => addPoints(10)}
                                                 className="relative overflow-hidden py-8 rounded-[2.5rem] font-black text-3xl md:text-4xl transition-all shadow-lg text-raisin flex items-center justify-center bg-saffron hover:-translate-y-2 hover:shadow-[0_10px_30px_rgba(244,200,43,0.5)] active:scale-95 disabled:opacity-75 disabled:hover:translate-y-0 disabled:hover:shadow-none"
                                             >
                                                 {isAddingPoints && addingPointsLabel === 10 ? <div className="loader !border-raisin !border-t-snow"></div> : '+10'}
                                             </button>
                                             <button
-                                                disabled={isAddingPoints || achievementNote.trim().length === 0} onClick={() => addPoints(20)}
+                                                disabled={isAddingPoints || special60.isActive || achievementNote.trim().length === 0} onClick={() => addPoints(20)}
                                                 className="relative overflow-hidden py-8 rounded-[2.5rem] font-black text-3xl md:text-4xl transition-all shadow-lg text-snow flex items-center justify-center bg-carmine hover:-translate-y-2 hover:shadow-[0_10px_30px_rgba(240,78,58,0.5)] active:scale-95 disabled:opacity-75 disabled:hover:translate-y-0 disabled:hover:shadow-none"
                                             >
                                                 {isAddingPoints && addingPointsLabel === 20 ? <div className="loader"></div> : '+20'}
                                             </button>
                                             <button
-                                                disabled={isAddingPoints || achievementNote.trim().length === 0} onClick={() => addPoints(30)}
+                                                disabled={isAddingPoints || special60.isActive || achievementNote.trim().length === 0} onClick={() => addPoints(30)}
                                                 className="relative overflow-hidden py-8 rounded-[2.5rem] font-black text-3xl md:text-4xl transition-all shadow-lg text-snow flex items-center justify-center bg-spanish hover:-translate-y-2 hover:shadow-[0_10px_30px_rgba(8,111,182,0.5)] active:scale-95 disabled:opacity-75 disabled:hover:translate-y-0 disabled:hover:shadow-none"
                                             >
                                                 {isAddingPoints && addingPointsLabel === 30 ? <div className="loader"></div> : '+30'}
+                                            </button>
+                                            <button
+                                                disabled={isAddingPoints || special60.isActive || achievementNote.trim().length === 0} onClick={() => addPoints(60)}
+                                                className="relative overflow-hidden py-8 rounded-[2.5rem] font-black text-3xl md:text-4xl transition-all shadow-lg text-snow flex items-center justify-center bg-[#8a7ee2] hover:-translate-y-2 hover:shadow-[0_10px_40px_rgba(138,126,226,0.7)] active:scale-95 disabled:opacity-75 disabled:hover:translate-y-0 disabled:hover:shadow-none"
+                                            >
+                                                {isAddingPoints && addingPointsLabel === 60 ? <div className="loader"></div> : '+60'}
                                             </button>
                                         </div>
                                     </div>
@@ -1017,12 +1124,21 @@
 
                                 {/* Dashboard Boards */}
                                 {adminMode && (
-                                    <div className="flex justify-center mb-6 max-w-7xl mx-auto">
+                                    <div className="flex justify-center gap-4 mb-6 max-w-7xl mx-auto">
                                         <button 
                                             onClick={togglePasswordsEnabled}
                                             className={`px-8 py-3 rounded-full font-black text-sm transition-all shadow-lg border ${globalPasswordsEnabled ? 'bg-carmine/20 text-carmine border-carmine/30 hover:bg-carmine hover:text-darker hover:shadow-[0_0_20px_rgba(240,78,58,0.5)]' : 'bg-verdigris/20 text-verdigris border-verdigris/30 hover:bg-verdigris hover:text-darker hover:shadow-[0_0_20px_rgba(31,168,161,0.5)]'}`}
                                         >
                                             {globalPasswordsEnabled ? 'إيقاف كلمات المرور' : 'تشغيل كلمات المرور'}
+                                        </button>
+                                        <button 
+                                            onClick={() => {
+                                                setAdminMode(false);
+                                                finishMemberLogin("سراج");
+                                            }}
+                                            className="px-8 py-3 rounded-full font-black text-sm bg-spanish/20 text-spanish border border-spanish/30 hover:bg-spanish hover:text-darker hover:shadow-[0_0_20px_rgba(8,111,182,0.5)] transition-all shadow-lg"
+                                        >
+                                            وضع التجربة
                                         </button>
                                     </div>
                                 )}
@@ -1088,6 +1204,8 @@
                                     {/* Left Side: History (Admin Only) */}
                                     {adminMode && (() => {
                                         const displayedHistory = historyLogs.filter(log => {
+                                            // Exclude سراج from history logs
+                                            if (log.user === "سراج") return false;
                                             const userMatch = historyFilterUser === "ALL" || log.user === historyFilterUser;
                                             const typeMatch =
                                                 (historySettings.showLogs && (!log.isWheel && log.amount === 0)) || // Journals
@@ -1469,7 +1587,7 @@
                             {/* Explosion Flash Overlay */}
                             <div className="absolute inset-0 bg-white z-[1001] pointer-events-none animate-white-flash opacity-0"></div>
 
-                            <div className="absolute top-10 flex flex-col items-center animate-slideDownFade">
+                            <div className="absolute top-10 flex flex-col items-center animate-logo-in">
                                 <img
                                     src="./Logo.png"
                                     alt="Logo"
@@ -1507,7 +1625,7 @@
                                 </div>
 
                                 <h2 className="text-4xl sm:text-6xl font-black text-white mb-4 drop-shadow-lg animate-explosiveIn">أحسنتم عملاً</h2>
-                                <p className="text-xl sm:text-2xl text-snow/90 mb-6 drop-shadow-md animate-[slideDownFade_1s_ease-out_0.2s_backwards]">نشكركم على جهدكم 🤍</p>
+                                <p className="text-xl sm:text-2xl text-snow/90 mb-6 drop-shadow-md animate-[slideUpFade_1s_ease-out_0.2s_both]">نشكركم على جهدكم 🤍</p>
                             </div>
 
                             {/* White Sparkles Overlay - Appears after 3s */}
@@ -1750,6 +1868,153 @@
                                     ))}
                                 </div>
                             </div>
+                        </div>
+                    )}
+
+                    {/* Special 60 Points Cinematic Overlay */}
+                    {special60.isActive && special60.phase !== 'loading' && (
+                        <div className={`fixed inset-0 z-[1000] bg-black text-snow overflow-hidden flex flex-col items-center justify-center ${special60.phase === 'black1' || special60.phase === 'black2' || special60.phase === 'crown' || special60.phase === 'celebration' ? '' : 'animate-fade-in'}`}>
+                            
+                            {special60.phase === 'crown' && (
+                                <div className="absolute inset-0 flex items-center justify-center bg-black">
+                                    <div className="absolute inset-0">
+                                        <img src="./Background.png" alt="" className="w-full h-full object-cover" />
+                                    </div>
+                                    <div className="relative z-10 animate-crown-snap">
+                                        <img src="./Crown.png" alt="Crown" className="w-24 h-24 sm:w-28 sm:h-28 object-contain drop-shadow-[0_0_60px_rgba(244,200,43,0.6)]" />
+                                    </div>
+                                </div>
+                            )}
+
+                            {special60.phase === 'celebration' && (
+                                <div className={`absolute inset-0 flex flex-col items-center justify-center bg-black/95 backdrop-blur-2xl animate-fade-in ${special60.cameraShake ? 'animate-camera-shake' : ''}`}>
+                                    {/* Cinematic Background Avatar - 5% Opacity Quick Pan */}
+                                    <div className="absolute inset-0 pointer-events-none overflow-hidden z-[-1] opacity-[0.05]"
+                                        style={{
+                                            WebkitMaskImage: 'radial-gradient(circle, black 30%, transparent 80%)',
+                                            maskImage: 'radial-gradient(circle, black 30%, transparent 80%)'
+                                        }}
+                                    >
+                                        <img
+                                            src={`./MdwnhMembers/${special60.user}.png`}
+                                            alt="Background Avatar"
+                                            className="w-full h-full object-cover animate-pan-quick blur-sm"
+                                        />
+                                    </div>
+
+                                    {/* Explosion Flash Overlay */}
+                                    <div className="absolute inset-0 bg-white z-[1001] pointer-events-none animate-white-flash opacity-0"></div>
+
+                                    <div className="absolute top-10 flex flex-col items-center animate-logo-in">
+                                        <img
+                                            src="./Logo.png"
+                                            alt="Logo"
+                                            className="w-24 sm:w-32 mb-4 drop-shadow-[0_0_15px_rgba(255,255,255,0.2)] invert brightness-200"
+                                        />
+                                    </div>
+
+                                    <div className="flex flex-col items-center text-center px-6 animate-explosiveIn">
+                                        <div className="w-40 h-40 sm:w-56 sm:h-56 mb-8 relative">
+                                            {/* Brand Glow Backdrop - 200% Larger & More Transparent */}
+                                            <div className="absolute inset-[-120px] rounded-full blur-[100px] opacity-40 animate-pulse"
+                                                style={{
+                                                    background: 'conic-gradient(#8a7ee2, #F4C82B, #8a7ee2, #086FB6, #8a7ee2)'
+                                                }}
+                                            ></div>
+
+                                            {/* Falling Crown on Avatar */}
+                                            {special60.showAvatarCrown && (
+                                                <div className="absolute left-1/2 -translate-x-1/2 z-20 animate-crown-fall" style={{ top: '-60px' }}>
+                                                    <img src="./GoldCrown.png" alt="Crown" className="w-56 h-56 sm:w-72 sm:h-72 object-contain drop-shadow-[0_0_50px_rgba(244,200,43,1)]" />
+                                                </div>
+                                            )}
+
+                                            <div className="relative w-full h-full p-[6px] rounded-full overflow-hidden shadow-[0_0_40px_rgba(138,126,226,0.5)]">
+                                                <div
+                                                    className="absolute inset-0 animate-spinSlow"
+                                                    style={{
+                                                        background: 'conic-gradient(from 0deg, #8a7ee2, #F4C82B, #8a7ee2, #086FB6, #1FA8A1, #8a7ee2)',
+                                                        backgroundSize: '200% 200%'
+                                                    }}
+                                                ></div>
+                                                <div className="relative bg-darker rounded-full p-1 w-full h-full">
+                                                    <div className="w-full h-full rounded-full overflow-hidden border-4 border-darker">
+                                                        <img
+                                                            src={`./MdwnhMembers/${special60.user}.png`}
+                                                            alt={special60.user}
+                                                            className="w-full h-full object-cover"
+                                                        />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <h2 className="text-4xl sm:text-6xl font-black text-white mb-4 drop-shadow-lg animate-explosiveIn">نقطة ألماااسية!!!</h2>
+                                        <p className="text-xl sm:text-2xl text-snow/90 mb-6 drop-shadow-md animate-[slideUpFade_1s_ease-out_0.2s_both]">نشكركم على جهدكم 🤍</p>
+                                    </div>
+
+                                    {/* White Sparkles Overlay */}
+                                    {showSparkles && (
+                                        <div className="absolute inset-0 pointer-events-none overflow-hidden z-[1002]">
+                                            {sparklePositions.map((sparkle, i) => (
+                                                <div
+                                                    key={i}
+                                                    className="absolute animate-sparkle-up opacity-0"
+                                                    style={{
+                                                        top: `${sparkle.top}%`,
+                                                        left: `${sparkle.left}%`,
+                                                        animationDelay: `${sparkle.delay}s`,
+                                                        animationDuration: `${sparkle.speed}s`
+                                                    }}
+                                                >
+                                                    <svg className="w-5 h-5 sm:w-7 sm:h-7 fill-white drop-shadow-[0_0_8px_rgba(255,255,255,0.8)]" viewBox="0 0 24 24" style={{ stroke: 'none' }}>
+                                                        <path d="M12 2L10.5 8.5L4 10L10.5 11.5L12 18L13.5 11.5L20 10L13.5 8.5L12 2Z" />
+                                                    </svg>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                    
+                                    {/* Continue Button */}
+                                    {special60.showContinue && (
+                                        <div className="absolute bottom-16 left-0 right-0 flex justify-center z-[1010] animate-fade-in" style={{ animationDuration: '1s' }}>
+                                            <button
+                                                onClick={() => {
+                                                    setSpecial60(prev => ({ ...prev, phase: 'screenshot' }));
+                                                    setShowSparkles(false);
+                                                }}
+                                                className="px-10 py-4 bg-[#8a7ee2] text-white rounded-full font-black text-xl shadow-[0_0_30px_rgba(138,126,226,0.6)] hover:scale-105 hover:bg-[#786dd1] transition-all"
+                                            >
+                                                متابعة
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                            {/* Screenshot Screen (Like Wheel Result) */}
+                            {special60.phase === 'screenshot' && (
+                                <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md animate-explosiveIn p-4">
+                                    <div className="glass-panel w-full max-w-sm p-8 text-center border-2 border-[#8a7ee2] shadow-[0_0_100px_rgba(138,126,226,0.3)]">
+                                        <div className="w-32 h-32 rounded-full mx-auto mb-6 overflow-hidden border-4 border-[#8a7ee2]">
+                                            <img src={`./MdwnhMembers/${special60.user}.png`} alt={special60.user} className="w-full h-full object-cover" />
+                                        </div>
+                                        <h3 className="text-4xl font-black mb-4 text-[#8a7ee2]">
+                                            مبروووك! 🎉
+                                        </h3>
+                                        <div className="bg-darker p-6 rounded-2xl border border-snow/10 mb-8">
+                                            <p className="text-2xl font-bold text-snow leading-relaxed">
+                                                لقد حصلت على +60 نقطة!
+                                            </p>
+                                        </div>
+                                        <p className="text-snow/50 text-sm mb-6 font-medium animate-pulse">قم بالتقاط الشاشة وارسلها للمشرف 📸</p>
+                                        <button
+                                            onClick={() => { setSpecial60({ isActive: false, phase: null, showContinue: false, user: null }); }}
+                                            className="w-full py-4 rounded-xl font-black text-xl transition-all shadow-lg bg-[#8a7ee2] text-white hover:bg-[#786dd1]"
+                                        >تم</button>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     )}
                 </div>

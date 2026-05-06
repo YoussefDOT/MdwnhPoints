@@ -771,8 +771,45 @@
                     setIsAddingPoints(true);
                     setAddingPointsLabel(60);
                     
-                    // Guaranteed minimum delay to show loading state (like other buttons)
-                    setTimeout(() => {
+                    // Preload all assets needed for the +60 animation
+                    const preloadAssets = async () => {
+                        const assets = [
+                            { type: 'audio', src: './sounds/5.mp3' },
+                            { type: 'image', src: './Crown.png' },
+                            { type: 'image', src: './Background.png' },
+                            { type: 'image', src: './GoldCrown.png' }
+                        ];
+
+                        const promises = assets.map(asset => {
+                            return new Promise((resolve) => {
+                                if (asset.type === 'audio') {
+                                    const audio = new Audio(asset.src);
+                                    audio.oncanplaythrough = () => resolve(audio);
+                                    audio.onerror = () => resolve(null);
+                                    // Timeout for audio loading
+                                    setTimeout(() => resolve(audio), 5000);
+                                } else {
+                                    const img = new Image();
+                                    img.onload = () => resolve(img);
+                                    img.onerror = () => resolve(null);
+                                    img.src = asset.src;
+                                }
+                            });
+                        });
+
+                        // Wait for all assets OR a global timeout of 8 seconds, PLUS a mandatory minimum wait of 300ms
+                        const minWaitPromise = new Promise(resolve => setTimeout(resolve, 300));
+                        const assetLoadPromise = Promise.race([
+                            Promise.all(promises),
+                            new Promise(resolve => setTimeout(() => resolve([]), 8000))
+                        ]);
+
+                        const [results] = await Promise.all([assetLoadPromise, minWaitPromise]);
+                        const audioAsset = results.find(a => a instanceof Audio) || new Audio('./sounds/5.mp3');
+                        return audioAsset;
+                    };
+
+                    preloadAssets().then((audio) => {
                         setSpecial60({ isActive: true, phase: 'loading', showContinue: false, showAvatarCrown: false, cameraShake: false, user: person });
                         
                         // Add points immediately
@@ -807,7 +844,6 @@
                         };
                         add60PointsToDb();
 
-                        const audio = new Audio('./sounds/5.mp3');
                         audio.volume = 0.5;
                         
                         const startAnimation = () => {
@@ -817,19 +853,9 @@
                         audio.onplay = () => {
                             setSpecial60(prev => ({ ...prev, phase: 'black1' }));
                             
-                            // Preload crown scene assets during blackout
-                            const crownImg = new Image();
-                            crownImg.src = './Crown.png';
-                            const bgImg = new Image();
-                            bgImg.src = './Background.png';
-                            
                             setTimeout(() => setSpecial60(prev => ({ ...prev, phase: 'crown' })), 3500);
                             setTimeout(() => setSpecial60(prev => ({ ...prev, phase: 'black2' })), 6500);
-                            // Preload gold crown during black2 phase (crown appears at 11800ms, so this gives 5.3s to load)
-                            setTimeout(() => {
-                                const goldCrownImg = new Image();
-                                goldCrownImg.src = './GoldCrown.png';
-                            }, 6500);
+                            
                             setTimeout(() => {
                                 setSpecial60(prev => ({ ...prev, phase: 'celebration' }));
                                 triggerConfetti(60); 
@@ -854,23 +880,8 @@
                             }, 9500);
                         };
 
-                        let hasStarted = false;
-                        audio.oncanplaythrough = () => {
-                            if (!hasStarted) {
-                                hasStarted = true;
-                                startAnimation();
-                            }
-                        };
-                        
-                        // Fallback in case audio doesn't fire event quickly
-                        setTimeout(() => {
-                            if (!hasStarted) {
-                                hasStarted = true;
-                                startAnimation();
-                            }
-                        }, 3000);
-                    }, 800);
-                    
+                        startAnimation();
+                    });
                 } else {
                     performAddPoints(amount, person);
                 }

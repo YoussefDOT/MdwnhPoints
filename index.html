@@ -105,7 +105,7 @@
                 if (points === 20) soundNum = "3";
                 if (points === 30) soundNum = "4";
 
-                const audio = new Audio(`./sounds/${soundNum}.mp3`);
+                const audio = new Audio(`./sounds/${soundNum}.mp3?v=2`);
                 audio.volume = 0.5;
                 audio.play().catch(err => console.error("Audio error:", err));
             } catch (e) {
@@ -488,7 +488,7 @@
 
                 // Pre-load audio
                 setIsAudioLoading(true);
-                const soundFile = type === 'PUNISHMENT' ? './sounds/العقاب.mp3' : (result === 30 ? './sounds/المكافأة كبيرة.mp3' : './sounds/المكافأة.mp3');
+                const soundFile = type === 'PUNISHMENT' ? './sounds/العقاب.mp3?v=2' : (result === 30 ? './sounds/المكافأة كبيرة.mp3?v=2' : './sounds/المكافأة.mp3?v=2');
 
                 try {
                     const audio = new Audio(soundFile);
@@ -774,7 +774,7 @@
                     // Preload all assets needed for the +60 animation
                     const preloadAssets = async () => {
                         const assets = [
-                            { type: 'audio', src: './sounds/5.mp3' },
+                            { type: 'audio', src: './sounds/5.mp3?v=2' },
                             { type: 'image', src: './Crown.png' },
                             { type: 'image', src: './Background.png' },
                             { type: 'image', src: './GoldCrown.png' }
@@ -805,7 +805,7 @@
                         ]);
 
                         const [results] = await Promise.all([assetLoadPromise, minWaitPromise]);
-                        const audioAsset = results.find(a => a instanceof Audio) || new Audio('./sounds/5.mp3');
+                        const audioAsset = results.find(a => a instanceof Audio) || new Audio('./sounds/5.mp3?v=2');
                         return audioAsset;
                     };
 

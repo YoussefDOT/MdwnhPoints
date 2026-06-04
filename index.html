@@ -484,7 +484,7 @@
 
                 const result = type === 'PUNISHMENT'
                     ? PUNISHMENTS[Math.floor(Math.random() * PUNISHMENTS.length)]
-                    : 30; // Force 30 for testing
+                    : REWARDS[Math.floor(Math.random() * REWARDS.length)];
 
                 // Pre-load audio
                 setIsAudioLoading(true);

@@ -389,6 +389,9 @@
         .sabha-gcell.val.today { outline: 1.5px solid rgba(126, 184, 212, 0.6); outline-offset: -1.5px; }
         .sabha-gcell.name.me { background: #122030; box-shadow: inset 3px 0 0 var(--sabha-blue); }
         .sabha-gcell.val.me.today { outline-color: rgba(126, 184, 212, 0.9); }
+        .sabha-gcell.name.me.logged-today { background: rgba(59, 185, 171, 0.13); box-shadow: inset 3px 0 0 #5fe0cf; }
+        .sabha-gcell.val.me.logged-today { box-shadow: inset 0 1.5px 0 rgba(95, 224, 207, 0.35), inset 0 -1.5px 0 rgba(95, 224, 207, 0.35); }
+        .sabha-board.females .sabha-gcell.name.me.logged-today { background: rgba(59, 185, 171, 0.13); box-shadow: inset 3px 0 0 #5fe0cf; }
         /* female (pink) accents */
         .sabha-board.females .sabha-grid-band { background: var(--sabha-pink-deep); }
         .sabha-board.females .sabha-gcell.head { background: rgba(201, 110, 160, 0.45); }
@@ -1978,13 +1981,18 @@
                                                 <div className={`sabha-board ${sabhaGender === 'females' ? 'females' : ''}`}>
                                                     {(() => {
                                                         const week = sabhaWeekDays(sabhaWeekOffset);
+                                                        const todayKey = sabhaKey(sabhaStartOfToday());
                                                         const list = (sabhaGender === 'males' ? SABHA_MALES : SABHA_FEMALES)
                                                             .filter(n => n !== 'سراج')
                                                             .map(name => {
                                                                 const entries = sabhaData[name] || {};
                                                                 return { name, entries, ...computeSabhaStats(entries) };
                                                             })
-                                                            .sort((a, b) => b.total - a.total);
+                                                            .sort((a, b) => {
+                                                                if (a.name === sabhaMe && a.entries[todayKey]) return -1;
+                                                                if (b.name === sabhaMe && b.entries[todayKey]) return 1;
+                                                                return b.total - a.total;
+                                                            });
 
                                                         if (list.length === 0) return <div key={sabhaGender} className="sabha-empty sabha-gender-list">لا يوجد بيانات بعد...</div>;
 
@@ -2014,9 +2022,10 @@
                                                                     {list.map((p) => {
                                                                         const rankIdx = list.indexOf(p);
                                                                         const isMe = p.name === sabhaMe;
+                                                                        const loggedToday = isMe && !!p.entries[todayKey];
                                                                         return (
                                                                             <React.Fragment key={p.name}>
-                                                                                <div className={`sabha-gcell name ${isMe ? 'me' : ''}`}>
+                                                                                <div className={`sabha-gcell name ${isMe ? 'me' : ''} ${loggedToday ? 'logged-today' : ''}`}>
                                                                                     <span className={`sabha-grank ${rankIdx === 0 ? 'top1' : rankIdx === 1 ? 'top2' : rankIdx === 2 ? 'top3' : ''}`}>{rankIdx + 1}</span>
                                                                                     <div className="sabha-gname-av-wrap">
                                                                                         <div className="sabha-gname-av">
@@ -2036,7 +2045,7 @@
                                                                                     const e = p.entries[d.key];
                                                                                     const pts = Math.max(0, Math.min(4, e ? (e.points || 0) : 0));
                                                                                     return (
-                                                                                        <div key={d.key} className={`sabha-gcell val p${pts} ${isMe ? 'me' : ''} ${d.isToday ? 'today' : ''}`}>
+                                                                                        <div key={d.key} className={`sabha-gcell val p${pts} ${isMe ? 'me' : ''} ${d.isToday ? 'today' : ''} ${loggedToday ? 'logged-today' : ''}`}>
                                                                                             <span className="gv" dir="ltr">{pts}<span className="gv-max"> | 4</span></span>
                                                                                         </div>
                                                                                     );

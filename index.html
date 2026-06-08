@@ -740,7 +740,7 @@
         // ============ صحبة الفجر (Sabha Fajr) — helpers & components ============
         const SABHA_FEMALE_SET = ["سحاب", "شفق", "منة", "ملك", "ورقاء", "نجود", "جمانة"];
         const SABHA_FEMALES = MEMBERS.filter(n => SABHA_FEMALE_SET.includes(n));
-        const SABHA_MALES = MEMBERS.filter(n => !SABHA_FEMALE_SET.includes(n) && n !== "سراج");
+        const SABHA_MALES = ["نواف", ...MEMBERS.filter(n => !SABHA_FEMALE_SET.includes(n) && n !== "سراج")];
         const SABHA_WEEKDAYS = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
         const SABHA_WEEKDAYS_SHORT = ['ح', 'ن', 'ث', 'ر', 'خ', 'ج', 'س'];
         const SABHA_MONTHS = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];

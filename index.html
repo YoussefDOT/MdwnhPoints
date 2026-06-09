@@ -65,8 +65,13 @@
         .sabha-bg-points { background-image: url('./BG.jpg'); }
         /* Sabha Fajr tab: solid deep-blue — covers the animated blobs entirely */
         .sabha-bg-fajr { background: #0b1824; }
-        /* Female overlay: fades in on top of the blue base to give a warm pink-dark tint */
-        .sabha-bg-female { background: linear-gradient(180deg, #1a0c18 0%, #120910 55%, #0d080f 100%); }
+        /* Female overlay: fades in on top of the blue base to give a vibrant pink tint */
+        .sabha-bg-female {
+            background:
+                radial-gradient(120% 70% at 50% 0%, rgba(232, 100, 170, 0.35), transparent 60%),
+                radial-gradient(80% 50% at 80% 80%, rgba(201, 110, 160, 0.18), transparent 55%),
+                linear-gradient(180deg, #250d1e 0%, #180b16 45%, #0f060d 100%);
+        }
 
         /* ---- Main tab bar ---- */
         .sabha-tabbar {
@@ -113,7 +118,7 @@
         }
 
         /* ---- Sliding viewport / panels ---- */
-        .sabha-viewport { position: relative; width: 100%; overflow: hidden; min-height: 100vh; }
+        .sabha-viewport { position: relative; width: 100%; overflow: hidden; min-height: 250vh; }
         .sabha-panel {
             width: 100%;
             transition: transform .55s cubic-bezier(0.22, 1, 0.36, 1), opacity .4s ease;

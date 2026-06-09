@@ -118,7 +118,7 @@
         }
 
         /* ---- Sliding viewport / panels ---- */
-        .sabha-viewport { position: relative; width: 100%; overflow: hidden; min-height: 250vh; }
+        .sabha-viewport { position: relative; width: 100%; overflow: hidden; transition: min-height .55s cubic-bezier(0.22, 1, 0.36, 1); }
         .sabha-panel {
             width: 100%;
             transition: transform .55s cubic-bezier(0.22, 1, 0.36, 1), opacity .4s ease;
@@ -1935,7 +1935,7 @@
                                     </div>
 
                                     {/* Sliding viewport: points panel + fajr panel */}
-                                    <div className="sabha-viewport" style={{ marginTop: '2.25rem' }}>
+                                    <div className="sabha-viewport" style={{ marginTop: '2.25rem', minHeight: mainTab === 'fajr' ? '200vh' : '0' }}>
                                         {/* ---- نقاط panel (unchanged behavior) ---- */}
                                         <div
                                             className="sabha-panel"

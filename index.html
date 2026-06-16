@@ -20,8 +20,17 @@
     <!-- React & ReactDOM -->
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    <!-- Babel -->
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <!-- Babel (pinned to v7: v8 defaults the React preset to the automatic JSX runtime,
+         which emits `import ... from "react/jsx-runtime"` and breaks this classic <script type="text/babel"> setup) -->
+    <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+    <!-- Failsafe: force the CLASSIC JSX runtime (React.createElement) regardless of Babel version.
+         This keeps the page working even if Babel ever resolves to v8+, where the default runtime
+         is "automatic" and emits ES `import` statements that crash a classic <script type="text/babel">. -->
+    <script>
+        Babel.registerPreset('react-classic', {
+            presets: [[Babel.availablePresets['react'], { runtime: 'classic' }]]
+        });
+    </script>
 
     <style>
         .cubic-bezier-wheel {
@@ -685,7 +694,7 @@
     </script>
 
     <!-- React App logic -->
-    <script type="text/babel">
+    <script type="text/babel" data-presets="react-classic,env">
         const { useState, useEffect, useRef } = React;
 
         const firebaseConfig = {
@@ -3255,5 +3264,24 @@
 
         const root = ReactDOM.createRoot(document.getElementById('root'));
         root.render(<App />);
+    </script>
+
+    <!-- Failsafe watchdog: if the app never renders (e.g. an in-browser compile/runtime error),
+         show a visible message instead of a silent blank page. -->
+    <script>
+        window.addEventListener('DOMContentLoaded', function () {
+            setTimeout(function () {
+                var root = document.getElementById('root');
+                if (root && root.children.length === 0) {
+                    console.error('[failsafe] App did not render within 6s — #root is empty. Check the browser console for a compile/runtime error.');
+                    root.innerHTML =
+                        '<div dir="rtl" style="max-width:480px;margin:80px auto;padding:32px;text-align:center;font-family:sans-serif;color:#f3f3f3;background:rgba(0,0,0,0.45);border-radius:18px;">' +
+                        '<h2 style="font-size:22px;margin:0 0 12px;">تعذّر تحميل الصفحة</h2>' +
+                        '<p style="font-size:15px;opacity:.85;margin:0 0 20px;">حدث خطأ أثناء التحميل. جرّب تحديث الصفحة.</p>' +
+                        '<button onclick="location.reload()" style="background:#e7b53b;color:#1a1a1a;border:none;border-radius:999px;padding:10px 28px;font-size:15px;font-weight:700;cursor:pointer;">تحديث الصفحة</button>' +
+                        '</div>';
+                }
+            }, 6000);
+        });
     </script>
 </body>

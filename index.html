@@ -1094,7 +1094,7 @@
         function Game({ db }) {
             const { ref, onValue, set, get, push, remove, serverTimestamp } = window.firebaseModular;
 
-            const [currentUser, setCurrentUser] = useState(() => localStorage.getItem("mdwnh_user") || null);
+            const [currentUser, setCurrentUser] = useState(null);
             const [targetUser, setTargetUser] = useState(null);
             const [players, setPlayers] = useState([]);
 
@@ -1188,7 +1188,7 @@
             };
             const [sabhaComplete, setSabhaComplete] = useState(null); // { user } | null
             const [expandedSabhaRow, setExpandedSabhaRow] = useState(false);
-            const [sabhaMe, setSabhaMe] = useState(() => localStorage.getItem('sabha_me') || localStorage.getItem('mdwnh_user') || null);
+            const [sabhaMe, setSabhaMe] = useState(null);
             const sabhaLoginIntentRef = useRef(false); // synchronous flag: login is for the Fajr daily log
 
             useEffect(() => {

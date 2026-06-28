@@ -1189,6 +1189,7 @@
             const [sabhaComplete, setSabhaComplete] = useState(null); // { user } | null
             const [expandedSabhaRow, setExpandedSabhaRow] = useState(false);
             const [sabhaMe, setSabhaMe] = useState(null);
+            const [userTab, setUserTab] = useState('points'); // 'points' | 'fajr'
             const sabhaLoginIntentRef = useRef(false); // synchronous flag: login is for the Fajr daily log
 
             useEffect(() => {
@@ -1233,6 +1234,18 @@
 
                 return () => { unsubscribe(); hUnsubscribe(); sUnsubscribe(); sabUnsubscribe(); };
             }, [db]);
+
+            // Restore saved login on mount (skip password re-entry since already authenticated)
+            useEffect(() => {
+                const saved = localStorage.getItem("mdwnh_user");
+                if (saved && MEMBERS.includes(saved)) {
+                    setCurrentUser(saved);
+                    setSabhaMe(saved);
+                } else {
+                    const savedMe = localStorage.getItem("sabha_me");
+                    if (savedMe) setSabhaMe(savedMe);
+                }
+            }, []);
 
             // Reset scroll to top when changing "pages" (user/admin login/logout)
             useEffect(() => {
@@ -1281,6 +1294,8 @@
                     return;
                 }
                 setCurrentUser(name);
+                setSabhaMe(name);
+                try { localStorage.setItem('sabha_me', name); } catch(e) {}
                 localStorage.setItem("mdwnh_user", name);
                 setPendingUser(null);
                 setMemberPasswordMode(null);
@@ -1894,6 +1909,91 @@
                 </div>
             );
 
+            const renderSabhaGrid = () => (
+                <div className="flex flex-col items-center w-full">
+                    <h2 className={`sabha-fajr-title ${sabhaGender === 'females' ? 'female' : ''}`}>صحبة الفجر</h2>
+                    <div className="sabha-subtabs">
+                        <button className={`sabha-subtab ${sabhaGender === 'males' ? 'is-active' : ''}`} onClick={() => { setSabhaAnim('gender'); setSabhaGender('males'); setExpandedSabhaRow(false); }}>الإخوة</button>
+                        <button className={`sabha-subtab ${sabhaGender === 'females' ? 'is-active female' : ''}`} onClick={() => { setSabhaAnim('gender'); setSabhaGender('females'); setExpandedSabhaRow(false); }}>الأخوات</button>
+                    </div>
+                    <div className={`sabha-board ${sabhaGender === 'females' ? 'females' : ''}`}>
+                        {(() => {
+                            const week = sabhaWeekDays(sabhaWeekOffset);
+                            const todayKey = sabhaKey(sabhaStartOfToday());
+                            const list = (sabhaGender === 'males' ? SABHA_MALES : SABHA_FEMALES)
+                                .filter(n => n !== 'سراج')
+                                .map(name => {
+                                    const entries = sabhaData[name] || {};
+                                    return { name, entries, ...computeSabhaStats(entries) };
+                                })
+                                .sort((a, b) => b.total - a.total);
+                            if (list.length === 0) return <div key={sabhaGender} className="sabha-empty sabha-gender-list">لا يوجد بيانات بعد...</div>;
+                            const animClass = sabhaAnim === 'gender' ? 'sabha-gender-list' : sabhaAnim === 'next' ? 'sabha-anim-next' : 'sabha-anim-prev';
+                            return (
+                                <div key={`${sabhaGender}-${sabhaWeekOffset}`} className={`sabha-board-inner ${animClass}`}>
+                                    <div className="sabha-grid-band">
+                                        <button className="sabha-week-nav" onClick={() => { setSabhaAnim('prev'); setSabhaWeekOffset(o => o - 1); }} aria-label="الأسبوع السابق">‹</button>
+                                        <span className="sabha-week-name">{sabhaWeekRangeLabel(sabhaWeekOffset)}</span>
+                                        <button className="sabha-week-nav" onClick={() => { setSabhaAnim('next'); setSabhaWeekOffset(o => o + 1); }} aria-label="الأسبوع التالي">›</button>
+                                    </div>
+                                    <div className="sabha-grid-wrap">
+                                        <div className="sabha-grid">
+                                        <div className="sabha-gcell head corner">المبدعون</div>
+                                        {week.map(d => (
+                                            <div key={d.key} className={`sabha-gcell head day ${d.isToday ? 'today' : ''}`}>
+                                                <span className="gh-day">
+                                                    <span className="gh-day-full">{SABHA_WEEKDAYS[d.date.getDay()]}</span>
+                                                    <span className="gh-day-short">{SABHA_WEEKDAYS_SHORT[d.date.getDay()]}</span>
+                                                </span>
+                                                <span className="gh-num">{d.isToday ? 'اليوم' : `${d.date.getDate()}/${d.date.getMonth() + 1}`}</span>
+                                            </div>
+                                        ))}
+                                        {list.map((p) => {
+                                            const rankIdx = list.indexOf(p);
+                                            const isMe = p.name === sabhaMe;
+                                            const loggedToday = isMe && !!p.entries[todayKey];
+                                            return (
+                                                <React.Fragment key={p.name}>
+                                                    <div className={`sabha-gcell name ${isMe ? 'me' : ''} ${loggedToday ? 'logged-today' : ''}`}>
+                                                        <span className={`sabha-grank ${rankIdx === 0 ? 'top1' : rankIdx === 1 ? 'top2' : rankIdx === 2 ? 'top3' : ''}`}>{rankIdx + 1}</span>
+                                                        <div className="sabha-gname-av-wrap">
+                                                            <div className="sabha-gname-av">
+                                                                <img src={`./MdwnhMembers/${p.name}.png`} alt={p.name} loading="lazy" onError={(e) => { e.target.src = AVATAR_FALLBACK; }} />
+                                                            </div>
+                                                            <span className={`sabha-gav-badge ${p.streak > 0 ? 'on' : ''}`}>
+                                                                <span className="bf">🔥</span>
+                                                                {p.streak > 0 && p.streak}
+                                                            </span>
+                                                        </div>
+                                                        <div className="sabha-gname-info">
+                                                            <span className="sabha-gname-txt">{p.name}</span>
+                                                            <span className="sabha-gname-pts">{p.total} نقطة</span>
+                                                        </div>
+                                                    </div>
+                                                    {week.map(d => {
+                                                        const e = p.entries[d.key];
+                                                        const pts = Math.max(0, Math.min(4, e ? (e.points || 0) : 0));
+                                                        return (
+                                                            <div key={d.key} className={`sabha-gcell val p${pts} ${isMe ? 'me' : ''} ${d.isToday ? 'today' : ''} ${loggedToday ? 'logged-today' : ''}`}>
+                                                                <span className="gv" dir="ltr">{pts}<span className="gv-max"> | 4</span></span>
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </React.Fragment>
+                                            );
+                                        })}
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                        })()}
+                    </div>
+                    <p style={{ marginTop: 18, fontSize: '0.76rem', color: 'rgba(250,249,247,0.3)', textAlign: 'center', lineHeight: 2 }}>
+                        🔥 الاستمرارية (streak) &nbsp;·&nbsp; النقطة = مجموع النقاط الكلي
+                    </p>
+                </div>
+            );
+
             const top3 = players.slice(0, 3);
             const activeActionUser = adminMode ? (targetUser || "اختر عضواً") : currentUser;
             const showSelection = (!currentUser && !adminMode && !showPasswordPrompt && !memberPasswordMode);
@@ -1926,13 +2026,13 @@
                             <div className="absolute w-[600px] h-[600px] rounded-full bg-spanish/20 blur-3xl bottom-10 right-20 animate-blob4"></div>
                         </div>
 
+                        {/* Cross-fading background layers (صحبة الفجر — active on selection page or user panel fajr tab) */}
+                        <div className="sabha-bg-layer sabha-bg-points" style={{ opacity: showSelection && mainTab === 'points' ? 0.12 : 0 }}></div>
+                        <div className="sabha-bg-layer sabha-bg-fajr" style={{ opacity: (showSelection && mainTab === 'fajr') || (currentUser && !adminMode && userTab === 'fajr') ? 1 : 0 }}></div>
+                        <div className="sabha-bg-layer sabha-bg-female" style={{ opacity: ((showSelection && mainTab === 'fajr') || (currentUser && !adminMode && userTab === 'fajr')) && sabhaGender === 'females' ? 1 : 0 }}></div>
+
                         {showSelection && (
                             <div className="relative min-h-screen">
-                                {/* Cross-fading background layers (نقاط vs صحبة الفجر) */}
-                                <div className="sabha-bg-layer sabha-bg-points" style={{ opacity: mainTab === 'points' ? 0.12 : 0 }}></div>
-                                <div className="sabha-bg-layer sabha-bg-fajr" style={{ opacity: mainTab === 'fajr' ? 1 : 0 }}></div>
-                                <div className="sabha-bg-layer sabha-bg-female" style={{ opacity: mainTab === 'fajr' && sabhaGender === 'females' ? 1 : 0 }}></div>
-
                                 <div className="w-full px-6 pt-16 flex flex-col items-center">
                                     <div className="mb-10 drop-shadow-2xl">
                                         <img src="./Logo.png" alt="ستوديو مدونة" className="h-20 sm:h-24 object-contain" style={{ filter: "brightness(0) invert(1)" }} />
@@ -1998,96 +2098,7 @@
                                                 pointerEvents: mainTab === 'fajr' ? 'auto' : 'none'
                                             }}
                                         >
-                                            <div className="flex flex-col items-center w-full" style={{ minHeight: 'calc(100vh - 220px)' }}>
-                                                <h2 className={`sabha-fajr-title ${sabhaGender === 'females' ? 'female' : ''}`}>صحبة الفجر</h2>
-
-                                                <div className="sabha-subtabs">
-                                                    <button className={`sabha-subtab ${sabhaGender === 'males' ? 'is-active' : ''}`} onClick={() => { setSabhaAnim('gender'); setSabhaGender('males'); setExpandedSabhaRow(false); }}>الإخوة</button>
-                                                    <button className={`sabha-subtab ${sabhaGender === 'females' ? 'is-active female' : ''}`} onClick={() => { setSabhaAnim('gender'); setSabhaGender('females'); setExpandedSabhaRow(false); }}>الأخوات</button>
-                                                </div>
-
-                                                <div className={`sabha-board ${sabhaGender === 'females' ? 'females' : ''}`}>
-                                                    {(() => {
-                                                        const week = sabhaWeekDays(sabhaWeekOffset);
-                                                        const todayKey = sabhaKey(sabhaStartOfToday());
-                                                        const list = (sabhaGender === 'males' ? SABHA_MALES : SABHA_FEMALES)
-                                                            .filter(n => n !== 'سراج')
-                                                            .map(name => {
-                                                                const entries = sabhaData[name] || {};
-                                                                return { name, entries, ...computeSabhaStats(entries) };
-                                                            })
-                                                            .sort((a, b) => b.total - a.total);
-
-                                                        if (list.length === 0) return <div key={sabhaGender} className="sabha-empty sabha-gender-list">لا يوجد بيانات بعد...</div>;
-
-                                                        const animClass = sabhaAnim === 'gender' ? 'sabha-gender-list' : sabhaAnim === 'next' ? 'sabha-anim-next' : 'sabha-anim-prev';
-                                                        return (
-                                                            <div key={`${sabhaGender}-${sabhaWeekOffset}`} className={`sabha-board-inner ${animClass}`}>
-                                                                {/* Week navigation band — outside the scroll wrap so arrows stay visible */}
-                                                                <div className="sabha-grid-band">
-                                                                    <button className="sabha-week-nav" onClick={() => { setSabhaAnim('prev'); setSabhaWeekOffset(o => o - 1); }} aria-label="الأسبوع السابق">‹</button>
-                                                                    <span className="sabha-week-name">{sabhaWeekRangeLabel(sabhaWeekOffset)}</span>
-                                                                    <button className="sabha-week-nav" onClick={() => { setSabhaAnim('next'); setSabhaWeekOffset(o => o + 1); }} aria-label="الأسبوع التالي">›</button>
-                                                                </div>
-                                                                <div className="sabha-grid-wrap">
-                                                                    <div className="sabha-grid">
-                                                                    {/* Header row */}
-                                                                    <div className="sabha-gcell head corner">المبدعون</div>
-                                                                    {week.map(d => (
-                                                                        <div key={d.key} className={`sabha-gcell head day ${d.isToday ? 'today' : ''}`}>
-                                                                            <span className="gh-day">
-                                                                                <span className="gh-day-full">{SABHA_WEEKDAYS[d.date.getDay()]}</span>
-                                                                                <span className="gh-day-short">{SABHA_WEEKDAYS_SHORT[d.date.getDay()]}</span>
-                                                                            </span>
-                                                                            <span className="gh-num">{d.isToday ? 'اليوم' : `${d.date.getDate()}/${d.date.getMonth() + 1}`}</span>
-                                                                        </div>
-                                                                    ))}
-                                                                    {/* Member rows */}
-                                                                    {list.map((p) => {
-                                                                        const rankIdx = list.indexOf(p);
-                                                                        const isMe = p.name === sabhaMe;
-                                                                        const loggedToday = isMe && !!p.entries[todayKey];
-                                                                        return (
-                                                                            <React.Fragment key={p.name}>
-                                                                                <div className={`sabha-gcell name ${isMe ? 'me' : ''} ${loggedToday ? 'logged-today' : ''}`}>
-                                                                                    <span className={`sabha-grank ${rankIdx === 0 ? 'top1' : rankIdx === 1 ? 'top2' : rankIdx === 2 ? 'top3' : ''}`}>{rankIdx + 1}</span>
-                                                                                    <div className="sabha-gname-av-wrap">
-                                                                                        <div className="sabha-gname-av">
-                                                                                            <img src={`./MdwnhMembers/${p.name}.png`} alt={p.name} loading="lazy" onError={(e) => { e.target.src = AVATAR_FALLBACK; }} />
-                                                                                        </div>
-                                                                                        <span className={`sabha-gav-badge ${p.streak > 0 ? 'on' : ''}`}>
-                                                                                            <span className="bf">🔥</span>
-                                                                                            {p.streak > 0 && p.streak}
-                                                                                        </span>
-                                                                                    </div>
-                                                                                    <div className="sabha-gname-info">
-                                                                                        <span className="sabha-gname-txt">{p.name}</span>
-                                                                                        <span className="sabha-gname-pts">{p.total} نقطة</span>
-                                                                                    </div>
-                                                                                </div>
-                                                                                {week.map(d => {
-                                                                                    const e = p.entries[d.key];
-                                                                                    const pts = Math.max(0, Math.min(4, e ? (e.points || 0) : 0));
-                                                                                    return (
-                                                                                        <div key={d.key} className={`sabha-gcell val p${pts} ${isMe ? 'me' : ''} ${d.isToday ? 'today' : ''} ${loggedToday ? 'logged-today' : ''}`}>
-                                                                                            <span className="gv" dir="ltr">{pts}<span className="gv-max"> | 4</span></span>
-                                                                                        </div>
-                                                                                    );
-                                                                                })}
-                                                                            </React.Fragment>
-                                                                        );
-                                                                    })}
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                        );
-                                                    })()}
-                                                </div>
-
-                                                <p style={{ marginTop: 18, fontSize: '0.76rem', color: 'rgba(250,249,247,0.3)', textAlign: 'center', lineHeight: 2 }}>
-                                                    🔥 الاستمرارية (streak) &nbsp;·&nbsp; النقطة = مجموع النقاط الكلي
-                                                </p>
-                                            </div>
+                                            {renderSabhaGrid()}
                                         </div>
                                     </div>
                                 </div>
@@ -2169,6 +2180,19 @@
                                         </button>
                                     </div>
                                 </header>
+
+                                {/* Tab switcher — user panel only (not admin) */}
+                                {!adminMode && (
+                                    <div className="flex justify-center -mt-2">
+                                        <div className="sabha-tabbar">
+                                            <button className={`sabha-tab points ${userTab === 'points' ? 'is-active' : ''}`} onClick={() => setUserTab('points')}>نقاط</button>
+                                            <button className={`sabha-tab fajr ${userTab === 'fajr' ? 'is-active' : ''} ${sabhaGender === 'females' ? 'female' : ''}`} onClick={() => { setUserTab('fajr'); setSabhaGender(SABHA_FEMALE_SET.includes(currentUser) ? 'females' : 'males'); }}>صحبة الفجر</button>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Points tab (always visible for admin, toggled for regular users) */}
+                                {(adminMode || userTab === 'points') && (<>
 
                                 {/* Stacked Layout: Adding Points Panel */}
                                 <div className="glass-panel p-6 sm:p-10">
@@ -2474,6 +2498,15 @@
                                         >
                                             خيارات القائد
                                         </button>
+                                    </div>
+                                )}
+
+                                </>)}
+
+                                {/* Fajr tab content (user panel) */}
+                                {!adminMode && userTab === 'fajr' && (
+                                    <div style={{ background: '#0b1824', borderRadius: 24, padding: '28px 8px 100px', minHeight: '60vh' }}>
+                                        {renderSabhaGrid()}
                                     </div>
                                 )}
 
@@ -3156,13 +3189,18 @@
                     {/* ============ صحبة الفجر overlays ============ */}
 
                     {/* Floating "add my day" button (only on the Fajr leaderboard) */}
-                    {showSelection && mainTab === 'fajr' && !sabhaLogUser && !showSabhaPicker && !sabhaComplete && !toast && (
+                    {((showSelection && mainTab === 'fajr') || (currentUser && !adminMode && userTab === 'fajr')) && !sabhaLogUser && !showSabhaPicker && !sabhaComplete && !toast && (
                         <button className={`sabha-fab ${sabhaGender === 'females' ? 'female' : ''}`} onClick={() => {
-                                            const tk = sabhaKey(sabhaStartOfToday());
-                                            if (sabhaMe && sabhaData[sabhaMe]?.[tk]) {
-                                                setSabhaAlreadyLoggedWarning({ name: sabhaMe, done: sabhaLoggableCount(sabhaMe) === 0 });
+                                            if (currentUser && !adminMode) {
+                                                // Logged-in user: go directly to log screen (handles all-done case internally)
+                                                setSabhaLogUser(currentUser);
                                             } else {
-                                                setShowSabhaPicker(true);
+                                                const tk = sabhaKey(sabhaStartOfToday());
+                                                if (sabhaMe && sabhaData[sabhaMe]?.[tk]) {
+                                                    setSabhaAlreadyLoggedWarning({ name: sabhaMe, done: sabhaLoggableCount(sabhaMe) === 0 });
+                                                } else {
+                                                    setShowSabhaPicker(true);
+                                                }
                                             }
                                         }}>
                             <span className="sabha-fab-plus">＋</span> إضافة يومي

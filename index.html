@@ -1201,6 +1201,10 @@
             const [sabhaMe, setSabhaMe] = useState(null);
             const [userTab, setUserTab] = useState('points'); // 'points' | 'fajr'
             const sabhaLoginIntentRef = useRef(false); // synchronous flag: login is for the Fajr daily log
+            const prevUserTierRef = useRef(null);
+
+            const [showPromotionModal, setShowPromotionModal] = useState(false);
+            const [promotionNewTier, setPromotionNewTier] = useState(null);
 
             useEffect(() => {
                 const playersRef = ref(db, 'players');
@@ -1256,6 +1260,29 @@
                     if (savedMe) setSabhaMe(savedMe);
                 }
             }, []);
+
+            // Promotion detection: fires when a user's tier increases due to points changes
+            useEffect(() => {
+                if (!currentUser || players.length === 0) return;
+                const idx = players.findIndex(p => p.name === currentUser);
+                if (idx === -1) return;
+                const newTier = Math.max(1, 5 - Math.floor(idx / 5));
+                if (prevUserTierRef.current !== null && newTier > prevUserTierRef.current) {
+                    const tc = TIER_CONFIG[newTier - 1];
+                    setPromotionNewTier(tc);
+                    setShowPromotionModal(true);
+                    setViewedTier(newTier);
+                    setLeaderboardView('tier');
+                    try { new Audio('./sounds/Promotion.mp3').play(); } catch(e) {}
+                    setTimeout(() => {
+                        if (window.confetti) {
+                            window.confetti({ particleCount: 250, spread: 120, origin: { y: 0.55 }, colors: [tc.color, '#fff', '#1fa8a1', '#f4c82b'] });
+                            setTimeout(() => window.confetti({ particleCount: 150, spread: 80, origin: { y: 0.4 }, colors: [tc.color, '#fff'] }), 600);
+                        }
+                    }, 150);
+                }
+                prevUserTierRef.current = newTier;
+            }, [players, currentUser]);
 
             // Reset scroll to top when changing "pages" (user/admin login/logout)
             useEffect(() => {
@@ -2160,7 +2187,14 @@
                                                 </div>
                                                 <div>
                                                     <p className="text-snow/60 text-sm">مرحباً بك،</p>
-                                                    <h1 className="text-2xl font-black text-snow drop-shadow-md">{currentUser}</h1>
+                                                    <div className="flex items-center gap-2 flex-wrap">
+                                                        <h1 className="text-2xl font-black text-snow drop-shadow-md">{currentUser}</h1>
+                                                        {userTierConfig && (
+                                                            <span className="text-xs font-black px-2.5 py-1 rounded-full" style={{ background: userTierConfig.bg, color: userTierConfig.color, border: `1px solid ${userTierConfig.border}`, boxShadow: `0 0 10px ${userTierConfig.glow}` }}>
+                                                                {userTierConfig.emoji} {userTierConfig.nameAr}
+                                                            </span>
+                                                        )}
+                                                    </div>
                                                     <div className="flex items-center gap-2 mt-1 overflow-visible">
                                                         <span className="text-snow/50 text-xs">نقاطك الحالية:</span>
                                                         <span
@@ -2173,13 +2207,6 @@
                                                             }}
                                                         >{players.find(p => p.name === currentUser)?.points ?? 0}</span>
                                                     </div>
-                                                    {userTierConfig && (
-                                                        <div className="flex items-center gap-1 mt-1.5">
-                                                            <span className="text-xs font-black px-2.5 py-1 rounded-full" style={{ background: userTierConfig.bg, color: userTierConfig.color, border: `1px solid ${userTierConfig.border}`, boxShadow: `0 0 10px ${userTierConfig.glow}` }}>
-                                                                {userTierConfig.emoji} {userTierConfig.nameAr}
-                                                            </span>
-                                                        </div>
-                                                    )}
                                                 </div>
                                             </div>
                                         )}
@@ -3388,6 +3415,44 @@
                     {/* 4/4 completion popup */}
                     {sabhaComplete && (
                         <SabhaCompletionPopup user={sabhaComplete.user} onClose={() => setSabhaComplete(null)} />
+                    )}
+
+                    {/* ── Promotion Celebration Modal ── */}
+                    {showPromotionModal && promotionNewTier && (
+                        <div className="fixed inset-0 z-[9999] flex flex-col items-center justify-center px-6" style={{ background: 'rgba(0,0,0,0.88)', backdropFilter: 'blur(10px)' }}>
+                            {/* User avatar */}
+                            <div className="w-28 h-28 rounded-full overflow-hidden mb-5 shrink-0" style={{ border: `4px solid ${promotionNewTier.color}`, boxShadow: `0 0 50px ${promotionNewTier.glow}, 0 0 20px ${promotionNewTier.glow}` }}>
+                                <img src={`./MdwnhMembers/${currentUser}.png`} alt={currentUser} className="w-full h-full object-cover" onError={(e) => { e.target.src = AVATAR_FALLBACK; }} />
+                            </div>
+
+                            {/* Big tier emoji */}
+                            <div className="text-8xl mb-4" style={{ filter: `drop-shadow(0 0 30px ${promotionNewTier.glow})` }}>{promotionNewTier.emoji}</div>
+
+                            {/* احسنتم */}
+                            <h1 className="text-5xl font-black text-snow mb-2 drop-shadow-lg" style={{ textShadow: '0 0 30px rgba(255,255,255,0.4)' }}>احسنتم!</h1>
+
+                            {/* جزيتم خيرًا */}
+                            <p className="text-2xl font-bold mb-6" style={{ color: promotionNewTier.color, textShadow: `0 0 20px ${promotionNewTier.glow}` }}>جزيتم خيرًا!</p>
+
+                            {/* Level badge */}
+                            <div className="px-8 py-4 rounded-2xl mb-4 text-center" style={{ background: promotionNewTier.bg, border: `2px solid ${promotionNewTier.border}`, boxShadow: `0 0 40px ${promotionNewTier.glow}` }}>
+                                <p className="text-xl font-black" style={{ color: promotionNewTier.color }}>
+                                    تم ترقيتك إلى المستوى {promotionNewTier.level} — {promotionNewTier.nameAr}
+                                </p>
+                            </div>
+
+                            {/* Screenshot instruction */}
+                            <p className="text-snow/45 text-sm font-bold mb-8 text-center">قم بالتقاط الشاشة وارسالها في التوثيق 📸</p>
+
+                            {/* Continue */}
+                            <button
+                                onClick={() => setShowPromotionModal(false)}
+                                className="px-12 py-4 rounded-full font-black text-xl text-darker transition-all hover:scale-105 active:scale-95"
+                                style={{ background: promotionNewTier.color, boxShadow: `0 0 40px ${promotionNewTier.glow}` }}
+                            >
+                                متابعة
+                            </button>
+                        </div>
                     )}
                 </div>
             );

@@ -1275,10 +1275,16 @@
                 prevUserTierRef.current = newTier;
             }, [players, currentUser]);
 
-            // Fire queued promotion once all point-award animations have finished
+            // Fire queued promotion once all point-award animations have finished.
+            // Guards use ALL four signals so the effect re-runs whenever any of them clears:
+            //  - celebration: set 700ms *inside* triggerCelebration timeout, so use isPageSuckingIn
+            //    (set synchronously in triggerCelebration) as the early sentinel
+            //  - special60.isActive: covers the entire 60+ cinematic
+            //  - isAddingPoints: covers 5/10/20 and the 30+ finally-block 3 s wait
+            //  - isPageSuckingIn: set synchronously before celebration, covers the 700 ms gap
             useEffect(() => {
                 if (!pendingPromotion) return;
-                if (celebration !== null || special60.isActive) return; // wait for animation
+                if (celebration !== null || special60.isActive || isPageSuckingIn || isAddingPoints) return;
                 const tc = pendingPromotion;
                 const timer = setTimeout(() => {
                     setPromotionNewTier(tc);
@@ -1287,8 +1293,8 @@
                     setLeaderboardView('tier');
                     setPendingPromotion(null);
                     try { new Audio('./sounds/Promotion.mp3').play(); } catch(e) {}
-                    // Trigger CSS fade-in on next paint
-                    setTimeout(() => setPromotionVisible(true), 40);
+                    // Two rAF frames guarantee the element has painted at opacity:0 before transition
+                    requestAnimationFrame(() => requestAnimationFrame(() => setPromotionVisible(true)));
                     setTimeout(() => {
                         if (window.confetti) {
                             window.confetti({ particleCount: 220, spread: 110, origin: { y: 0.55 }, colors: [tc.color, '#fff', '#1fa8a1', '#f4c82b'] });
@@ -1297,7 +1303,7 @@
                     }, 200);
                 }, 500);
                 return () => clearTimeout(timer);
-            }, [pendingPromotion, celebration, special60.isActive]);
+            }, [pendingPromotion, celebration, special60.isActive, isPageSuckingIn, isAddingPoints]);
 
             // Reset scroll to top when changing "pages" (user/admin login/logout)
             useEffect(() => {

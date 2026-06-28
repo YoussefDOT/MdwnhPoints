@@ -2104,50 +2104,56 @@
                                     </div>
 
                                     {/* Member picker — males right, females left */}
-                                    <div className="w-full mt-8">
-                                        <div className="w-full text-center mb-8">
+                                    <div className="w-full mt-6">
+                                        <div className="w-full text-center mb-6">
                                             <h2 className="text-2xl font-black text-saffron drop-shadow-md">اختر أسمك</h2>
                                             <p className="text-snow/70 mt-2 text-sm">شكرًا على مجهوداتكم!</p>
                                         </div>
 
-                                        <div className="w-full max-w-lg mx-auto">
-                                            {/* Males */}
-                                            <p className="text-xs font-black text-snow/35 mb-5 tracking-widest text-center">الإخوة</p>
-                                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px 12px', justifyItems: 'center' }}>
-                                                {MEMBERS.filter(n => !SABHA_FEMALE_SET.includes(n)).map((name) => (
-                                                    <button key={name} onClick={() => selectUser(name)} disabled={isMemberPasswordLoading}
-                                                        className="group flex flex-col items-center gap-2 transition-transform hover:-translate-y-1 active:scale-95 disabled:opacity-50">
-                                                        <div className="w-16 h-16 rounded-full border-[3px] border-darker bg-darker overflow-hidden group-hover:border-spanish transition-colors shadow-lg">
-                                                            <img src={`./MdwnhMembers/${name}.png`} alt={name} className="w-full h-full object-cover" loading="lazy" onError={(e) => { e.target.src = AVATAR_FALLBACK; }} />
-                                                        </div>
-                                                        <span className="text-snow font-bold text-xs bg-darker/80 px-3 py-1 rounded-full group-hover:bg-spanish transition-colors">{name}</span>
-                                                    </button>
-                                                ))}
+                                        <div className="flex items-start w-full px-4" style={{ gap: '0' }}>
+                                            {/* Males — right side, fills remaining space */}
+                                            <div className="flex-1 min-w-0">
+                                                <p className="text-xs font-black mb-3 tracking-widest text-center" style={{ color: 'rgba(250,249,247,0.35)' }}>🧑 الإخوة</p>
+                                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(68px, 1fr))', gap: '6px' }}>
+                                                    {MEMBERS.filter(n => !SABHA_FEMALE_SET.includes(n)).map((name) => (
+                                                        <button key={name} onClick={() => selectUser(name)} disabled={isMemberPasswordLoading}
+                                                            className="group flex flex-col items-center active:scale-95 disabled:opacity-50"
+                                                            style={{ padding: '8px 4px', borderRadius: '12px', background: 'rgba(250,249,247,0.04)', border: '1px solid rgba(250,249,247,0.06)', transition: 'background 0.15s' }}
+                                                            onMouseEnter={e => e.currentTarget.style.background = 'rgba(250,249,247,0.09)'}
+                                                            onMouseLeave={e => e.currentTarget.style.background = 'rgba(250,249,247,0.04)'}>
+                                                            <div className="rounded-full overflow-hidden shadow-md" style={{ width: 48, height: 48, border: '2px solid rgba(250,249,247,0.1)' }}>
+                                                                <img src={`./MdwnhMembers/${name}.png`} alt={name} className="w-full h-full object-cover" loading="lazy" onError={(e) => { e.target.src = AVATAR_FALLBACK; }} />
+                                                            </div>
+                                                            <span className="font-bold text-center mt-1.5" style={{ color: 'rgba(250,249,247,0.9)', fontSize: 11, lineHeight: 1.2 }}>{name}</span>
+                                                        </button>
+                                                    ))}
+                                                </div>
                                             </div>
 
                                             {/* Separator */}
-                                            <div className="my-10 flex items-center gap-4">
-                                                <div className="flex-1 h-px" style={{ background: 'linear-gradient(to left, rgba(250,249,247,0.12), transparent)' }}></div>
-                                                <span className="text-snow/20 text-sm">✦</span>
-                                                <div className="flex-1 h-px" style={{ background: 'linear-gradient(to right, rgba(250,249,247,0.12), transparent)' }}></div>
-                                            </div>
+                                            <div className="flex-shrink-0 self-stretch mx-3" style={{ width: 1, background: 'linear-gradient(to bottom, transparent, rgba(250,249,247,0.13) 15%, rgba(250,249,247,0.13) 85%, transparent)' }}></div>
 
-                                            {/* Females */}
-                                            <p className="text-xs font-black text-snow/35 mb-5 tracking-widest text-center">الأخوات</p>
-                                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px 12px', justifyItems: 'center' }}>
-                                                {MEMBERS.filter(n => SABHA_FEMALE_SET.includes(n)).map((name) => (
-                                                    <button key={name} onClick={() => selectUser(name)} disabled={isMemberPasswordLoading}
-                                                        className="group flex flex-col items-center gap-2 transition-transform hover:-translate-y-1 active:scale-95 disabled:opacity-50">
-                                                        <div className="w-16 h-16 rounded-full border-[3px] border-darker bg-darker overflow-hidden group-hover:border-spanish transition-colors shadow-lg">
-                                                            <img src={`./MdwnhMembers/${name}.png`} alt={name} className="w-full h-full object-cover" loading="lazy" onError={(e) => { e.target.src = AVATAR_FALLBACK; }} />
-                                                        </div>
-                                                        <span className="text-snow font-bold text-xs bg-darker/80 px-3 py-1 rounded-full group-hover:bg-spanish transition-colors">{name}</span>
-                                                    </button>
-                                                ))}
+                                            {/* Females — left side, fixed 3-col */}
+                                            <div className="flex-shrink-0">
+                                                <p className="text-xs font-black mb-3 tracking-widest text-center" style={{ color: 'rgba(250,249,247,0.35)' }}>🌸 الأخوات</p>
+                                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 68px)', gap: '6px' }}>
+                                                    {MEMBERS.filter(n => SABHA_FEMALE_SET.includes(n)).map((name) => (
+                                                        <button key={name} onClick={() => selectUser(name)} disabled={isMemberPasswordLoading}
+                                                            className="group flex flex-col items-center active:scale-95 disabled:opacity-50"
+                                                            style={{ padding: '8px 4px', borderRadius: '12px', background: 'rgba(250,249,247,0.04)', border: '1px solid rgba(250,249,247,0.06)', transition: 'background 0.15s' }}
+                                                            onMouseEnter={e => e.currentTarget.style.background = 'rgba(250,249,247,0.09)'}
+                                                            onMouseLeave={e => e.currentTarget.style.background = 'rgba(250,249,247,0.04)'}>
+                                                            <div className="rounded-full overflow-hidden shadow-md" style={{ width: 48, height: 48, border: '2px solid rgba(250,249,247,0.1)' }}>
+                                                                <img src={`./MdwnhMembers/${name}.png`} alt={name} className="w-full h-full object-cover" loading="lazy" onError={(e) => { e.target.src = AVATAR_FALLBACK; }} />
+                                                            </div>
+                                                            <span className="font-bold text-center mt-1.5" style={{ color: 'rgba(250,249,247,0.9)', fontSize: 11, lineHeight: 1.2 }}>{name}</span>
+                                                        </button>
+                                                    ))}
+                                                </div>
                                             </div>
                                         </div>
 
-                                        <div className="flex justify-center mt-16">
+                                        <div className="flex justify-center mt-12">
                                             <button onClick={() => setShowPasswordPrompt(true)} className="text-xs text-snow/30 hover:text-snow/80 transition-colors select-none">
                                                 خيارات القائد
                                             </button>

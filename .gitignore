@@ -1,0 +1,9 @@
+# macOS metadata
+.DS_Store
+._*
+
+# Claude Code config
+.claude/
+
+# Node
+node_modules/

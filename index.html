@@ -1202,6 +1202,8 @@
             const [userTab, setUserTab] = useState('points'); // 'points' | 'fajr'
             const sabhaLoginIntentRef = useRef(false); // synchronous flag: login is for the Fajr daily log
             const prevUserTierRef = useRef(null);
+            const prevUserPointsRef = useRef(null);
+            const prevUserNameRef = useRef(null);
 
             const [showPromotionModal, setShowPromotionModal] = useState(false);
             const [promotionNewTier, setPromotionNewTier] = useState(null);
@@ -1269,10 +1271,24 @@
                 const idx = players.findIndex(p => p.name === currentUser);
                 if (idx === -1) return;
                 const newTier = Math.max(1, 5 - Math.floor(idx / 5));
-                if (prevUserTierRef.current !== null && newTier > prevUserTierRef.current) {
+                const myPoints = players[idx].points ?? 0;
+                // A different user just logged in — reset the baseline, never compare across users.
+                if (prevUserNameRef.current !== currentUser) {
+                    prevUserNameRef.current = currentUser;
+                    prevUserTierRef.current = newTier;
+                    prevUserPointsRef.current = myPoints;
+                    return;
+                }
+                // Only celebrate a real promotion: tier went up AND the user's OWN points increased.
+                // Relative tiers can shift on the first data snapshot (partial/unsorted load) or when
+                // others' points change — those must never fire the card on a plain page open.
+                const tierWentUp = prevUserTierRef.current !== null && newTier > prevUserTierRef.current;
+                const pointsWentUp = prevUserPointsRef.current !== null && myPoints > prevUserPointsRef.current;
+                if (tierWentUp && pointsWentUp) {
                     setPendingPromotion(TIER_CONFIG[newTier - 1]);
                 }
                 prevUserTierRef.current = newTier;
+                prevUserPointsRef.current = myPoints;
             }, [players, currentUser]);
 
             // Fire queued promotion once all point-award animations have finished.
@@ -2231,6 +2247,15 @@
                                 {/* Points tab (always visible for admin, toggled for regular users) */}
                                 {(adminMode || userTab === 'points') && (<>
 
+                                {/* Achievements block: compact header sits OUTSIDE / above the panel (member view) */}
+                                <div>
+                                {!adminMode && (
+                                    <div className="flex items-baseline gap-x-3 gap-y-1 flex-wrap mb-3 px-2">
+                                        <h2 className="text-2xl sm:text-3xl font-black text-snow drop-shadow-md">تسجيل الإنجازات</h2>
+                                        <p className="text-snow/70 text-sm">تتم إضافة النقاط إلى: <strong className="text-verdigris font-black">{activeActionUser}</strong></p>
+                                    </div>
+                                )}
+
                                 {/* Stacked Layout: Adding Points Panel */}
                                 <div className="glass-panel p-6 sm:p-10">
                                     {adminMode && (
@@ -2268,10 +2293,12 @@
                                     )}
 
                                     <div className={`transform transition-opacity ${adminMode && !targetUser ? 'opacity-50 pointer-events-none' : 'opacity-100'}`}>
-                                        <div className="text-center mb-6">
-                                            <h2 className="text-3xl font-black text-snow mb-2 drop-shadow-md">تسجيل الإنجازات</h2>
-                                            <p className="text-snow/70 pb-2">تتم إضافة النقاط إلى: <strong className="text-verdigris font-black text-lg">{activeActionUser}</strong></p>
-                                        </div>
+                                        {adminMode && (
+                                            <div className="text-center mb-6">
+                                                <h2 className="text-3xl font-black text-snow mb-2 drop-shadow-md">تسجيل الإنجازات</h2>
+                                                <p className="text-snow/70 pb-2">تتم إضافة النقاط إلى: <strong className="text-verdigris font-black text-lg">{activeActionUser}</strong></p>
+                                            </div>
+                                        )}
 
                                         <div className="max-w-2xl mx-auto mb-8">
                                             <input
@@ -2317,6 +2344,7 @@
                                         </div>
                                     </div>
                                 </div>
+                                </div>
 
                                 {/* Dashboard Boards */}
                                 {adminMode && (
@@ -2338,40 +2366,54 @@
                                         </button>
                                     </div>
                                 )}
+                                <div>
+                                {/* Leaderboard header — sits OUTSIDE / above the panel, compact (member view) */}
+                                {!adminMode && (
+                                    <div className="flex items-center justify-between mb-3 flex-wrap gap-3 px-2">
+                                        <h2 className="text-2xl font-black text-snow drop-shadow-md">🏆 المتميزون</h2>
+                                        <div className="flex gap-2">
+                                            <button onClick={() => { setLeaderboardView('tier'); setViewedTier(null); }}
+                                                className={`px-3 py-1.5 rounded-full text-xs font-black transition-all border ${leaderboardView === 'tier' && viewedTier === null ? 'bg-saffron/20 text-saffron border-saffron/40' : 'bg-darker text-snow/50 border-snow/10 hover:text-snow/80'}`}>
+                                                مستواي
+                                            </button>
+                                            <button onClick={() => setLeaderboardView('all')}
+                                                className={`px-3 py-1.5 rounded-full text-xs font-black transition-all border ${leaderboardView === 'all' ? 'bg-spanish/20 text-spanish border-spanish/40' : 'bg-darker text-snow/50 border-snow/10 hover:text-snow/80'}`}>
+                                                عرض الكل
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
                                 <div className={adminMode ? "grid grid-cols-1 md:grid-cols-2 gap-8 max-w-7xl mx-auto mb-8" : "glass-panel p-6 sm:p-10 mb-8 max-w-5xl mx-auto"}>
 
                                     {/* Right Side: Leaderboard */}
                                     <div className={adminMode ? "glass-panel p-6 sm:p-10" : ""}>
-                                        {/* ── Tier leaderboard header ── */}
-                                        <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
-                                            <h2 className="text-2xl font-black text-snow drop-shadow-md">🏆 المتميزون</h2>
-                                            {!adminMode && (
-                                                <div className="flex gap-2">
-                                                    <button onClick={() => { setLeaderboardView('tier'); setViewedTier(null); }}
-                                                        className={`px-3 py-1.5 rounded-full text-xs font-black transition-all border ${leaderboardView === 'tier' && viewedTier === null ? 'bg-saffron/20 text-saffron border-saffron/40 shadow-[0_0_12px_rgba(244,200,43,0.3)]' : 'bg-darker text-snow/50 border-snow/10 hover:text-snow/80'}`}>
-                                                        مستواي
-                                                    </button>
-                                                    <button onClick={() => setLeaderboardView('all')}
-                                                        className={`px-3 py-1.5 rounded-full text-xs font-black transition-all border ${leaderboardView === 'all' ? 'bg-spanish/20 text-spanish border-spanish/40 shadow-[0_0_12px_rgba(8,111,182,0.3)]' : 'bg-darker text-snow/50 border-snow/10 hover:text-snow/80'}`}>
-                                                        عرض الكل
-                                                    </button>
-                                                </div>
-                                            )}
-                                        </div>
+                                        {/* ── Tier leaderboard header (admin only; member view moved outside) ── */}
+                                        {adminMode && (
+                                            <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
+                                                <h2 className="text-2xl font-black text-snow drop-shadow-md">🏆 المتميزون</h2>
+                                            </div>
+                                        )}
 
-                                        {/* ── Tier level mini-nav (always shown) ── */}
-                                        <div className="flex justify-center gap-2 mb-7">
-                                            {[...TIER_CONFIG].reverse().map(tc => (
-                                                <button key={tc.level}
-                                                    onClick={() => { setViewedTier(tc.level); setLeaderboardView('tier'); }}
-                                                    title={tc.nameAr}
-                                                    className="w-11 h-11 rounded-full flex items-center justify-center text-xl transition-all duration-200"
-                                                    style={activeTierNum === tc.level && leaderboardView === 'tier'
-                                                        ? { background: tc.bg, border: `2px solid ${tc.border}`, boxShadow: `0 0 16px ${tc.glow}`, transform: 'scale(1.15)' }
-                                                        : { background: 'rgba(0,0,0,0.25)', border: '2px solid rgba(255,255,255,0.08)', opacity: 0.55 }}>
-                                                    {tc.emoji}
-                                                </button>
-                                            ))}
+                                        {/* ── Tier level mini-nav (always shown) — dot marks your home tier ── */}
+                                        <div className="flex justify-center items-start gap-2 mb-5">
+                                            {[...TIER_CONFIG].reverse().map(tc => {
+                                                const isActive = activeTierNum === tc.level && leaderboardView === 'tier';
+                                                const isMine = tc.level === userTierNum;
+                                                return (
+                                                    <div key={tc.level} className="flex flex-col items-center gap-1">
+                                                        <button
+                                                            onClick={() => { setViewedTier(tc.level); setLeaderboardView('tier'); }}
+                                                            title={tc.nameAr}
+                                                            className="w-11 h-11 rounded-full flex items-center justify-center text-xl transition-all duration-200"
+                                                            style={isActive
+                                                                ? { background: tc.bg, border: `2px solid ${tc.border}`, transform: 'scale(1.15)' }
+                                                                : { background: 'rgba(0,0,0,0.25)', border: '2px solid rgba(255,255,255,0.08)', opacity: isMine ? 0.85 : 0.55 }}>
+                                                            {tc.emoji}
+                                                        </button>
+                                                        <span className="w-1.5 h-1.5 rounded-full" style={{ background: isMine ? tc.color : 'transparent' }}></span>
+                                                    </div>
+                                                );
+                                            })}
                                         </div>
 
                                         {players.length === 0 ? (
@@ -2395,13 +2437,13 @@
                                                                     const isMe = p.name === currentUser;
                                                                     return (
                                                                         <div key={p.name} className="flex items-center gap-3 px-4 py-3 rounded-xl border transition-all hover:scale-[1.01]"
-                                                                            style={isMe ? { background: tc.bg, borderColor: tc.border, boxShadow: `0 0 18px ${tc.glow}` } : { background: 'rgba(0,0,0,0.18)', borderColor: 'rgba(255,255,255,0.05)' }}>
+                                                                            style={isMe ? { background: tc.bg, borderColor: tc.border } : { background: 'rgba(0,0,0,0.18)', borderColor: 'rgba(255,255,255,0.05)' }}>
                                                                             <span className="font-black text-sm w-5 text-center" style={{ color: i === 0 ? tc.color : 'rgba(250,249,247,0.3)' }}>{i + 1}</span>
                                                                             <div className="w-10 h-10 rounded-full overflow-hidden bg-raisin shrink-0 border" style={{ borderColor: isMe ? tc.color : 'rgba(255,255,255,0.1)' }}>
                                                                                 <img src={`./MdwnhMembers/${p.name}.png`} alt={p.name} className="w-full h-full object-cover" onError={(e) => { e.target.src = AVATAR_FALLBACK; }} />
                                                                             </div>
                                                                             <span className="font-bold text-snow flex-1 text-sm">{p.name}</span>
-                                                                            <span className="font-black text-lg" style={{ color: tc.color, textShadow: `0 0 10px ${tc.glow}` }}>{p.points}</span>
+                                                                            <span className="font-black text-lg" style={{ color: tc.color }}>{p.points}</span>
                                                                         </div>
                                                                     );
                                                                 })}
@@ -2418,16 +2460,19 @@
                                                 const tierAbove = tieredPlayers.filter(p => p.tier === activeTierNum + 1);
                                                 const myPoints = userTierEntry?.points ?? 0;
                                                 const promotionTarget = tierAbove.length ? tierAbove[tierAbove.length - 1].points : null;
-                                                const promotionGap = promotionTarget !== null ? promotionTarget - myPoints + 1 : null;
+                                                // Points are only awarded in multiples of 5 (5/10/20/30/60), so round the
+                                                // raw gap up to the next multiple of 5 — reaching it always clears the bar.
+                                                const rawGap = promotionTarget !== null ? promotionTarget - myPoints + 1 : null;
+                                                const promotionGap = rawGap !== null ? Math.ceil(rawGap / 5) * 5 : null;
                                                 return (
                                                     <div className="max-w-4xl mx-auto">
-                                                        {/* Tier title */}
-                                                        <div className="text-center mb-6">
-                                                            <div className="text-5xl mb-2 drop-shadow-lg" style={{ filter: `drop-shadow(0 0 12px ${tc.glow})` }}>{tc.emoji}</div>
-                                                            <h3 className="text-xl font-black mb-1" style={{ color: tc.color }}>{tc.nameAr}</h3>
-                                                            <p className="text-xs text-snow/40 font-bold">المستوى {tc.level} من 5</p>
+                                                        {/* Compact tier banner — replaces the tall icon block so members sit above the fold */}
+                                                        <div className="flex items-center justify-center gap-2 flex-wrap mb-5">
+                                                            <span className="text-2xl leading-none">{tc.emoji}</span>
+                                                            <h3 className="text-lg font-black" style={{ color: tc.color }}>{tc.nameAr}</h3>
+                                                            <span className="text-xs text-snow/40 font-bold">· المستوى {tc.level} من 5</span>
                                                             {userTierNum === activeTierNum && currentUser && (
-                                                                <span className="inline-block mt-2 text-xs px-3 py-1 rounded-full font-black" style={{ background: tc.bg, border: `1px solid ${tc.border}`, color: tc.color }}>مستواك الحالي ✦</span>
+                                                                <span className="text-[11px] px-2 py-0.5 rounded-full font-black" style={{ background: tc.bg, border: `1px solid ${tc.border}`, color: tc.color }}>مستواك ✦</span>
                                                             )}
                                                         </div>
                                                         {/* Players */}
@@ -2437,23 +2482,25 @@
                                                                 const isMe = p.name === currentUser;
                                                                 return (
                                                                     <div key={p.name} className="flex items-center gap-4 px-4 py-4 rounded-2xl border-2 transition-all hover:scale-[1.01]"
-                                                                        style={isMe ? { background: tc.bg, borderColor: tc.border, boxShadow: `0 0 24px ${tc.glow}` } : { background: 'rgba(0,0,0,0.22)', borderColor: 'rgba(255,255,255,0.07)' }}>
+                                                                        style={isMe ? { background: tc.bg, borderColor: tc.border } : { background: 'rgba(0,0,0,0.22)', borderColor: 'rgba(255,255,255,0.07)' }}>
                                                                         <div className="text-3xl w-8 text-center shrink-0">{i < 3 ? medals[i] : <span className="font-black text-base" style={{ color: 'rgba(250,249,247,0.3)' }}>{i + 1}</span>}</div>
                                                                         <div className="w-14 h-14 rounded-full overflow-hidden bg-raisin shrink-0 border-2" style={{ borderColor: isMe ? tc.color : 'rgba(255,255,255,0.1)' }}>
                                                                             <img src={`./MdwnhMembers/${p.name}.png`} alt={p.name} className="w-full h-full object-cover" onError={(e) => { e.target.src = AVATAR_FALLBACK; }} />
                                                                         </div>
                                                                         <span className="font-bold text-xl text-snow flex-1">{p.name}</span>
-                                                                        <span className="font-black text-3xl" style={{ color: tc.color, textShadow: `0 0 14px ${tc.glow}` }}>{p.points}</span>
+                                                                        <span className="font-black text-3xl" style={{ color: tc.color }}>{p.points}</span>
                                                                     </div>
                                                                 );
                                                             })}
                                                         </div>
                                                         {/* Promotion gap */}
                                                         {activeTierNum < 5 && promotionGap !== null && promotionGap > 0 && (
-                                                            <p className="mt-10 text-center text-xs font-bold" style={{ color: TIER_CONFIG[activeTierNum].color, opacity: 0.65 }}>
-                                                                للصعود إلى {TIER_CONFIG[activeTierNum].emoji} {TIER_CONFIG[activeTierNum].nameAr}
-                                                                {userTierNum === activeTierNum && currentUser ? <> · <span className="text-saffron">{promotionGap} نقطة</span></> : <> · الفاصل <span className="text-saffron">{promotionGap} نقطة</span></>}
-                                                            </p>
+                                                            <div className="mt-8 pt-6 border-t border-snow/10">
+                                                                <p className="text-center text-xs font-bold" style={{ color: TIER_CONFIG[activeTierNum].color, opacity: 0.75 }}>
+                                                                    للصعود إلى {TIER_CONFIG[activeTierNum].emoji} {TIER_CONFIG[activeTierNum].nameAr}
+                                                                    {userTierNum === activeTierNum && currentUser ? <> · <span className="text-saffron">{promotionGap} نقطة</span></> : <> · الفاصل <span className="text-saffron">{promotionGap} نقطة</span></>}
+                                                                </p>
+                                                            </div>
                                                         )}
                                                         {activeTierNum === 5 && (
                                                             <p className="mt-4 text-center text-xs font-bold" style={{ color: tc.color, opacity: 0.6 }}>✦ القمة — لا مستوى أعلى من هذا ✦</p>
@@ -2592,6 +2639,7 @@
                                             </div>
                                         );
                                     })()}
+                                </div>
                                 </div>
 
                                 {!adminMode && (
@@ -3412,45 +3460,65 @@
                             }}
                         >
                             <div
-                                className="glass-panel w-full max-w-sm p-8 text-center border-2"
+                                className="glass-panel w-full max-w-sm text-center relative overflow-hidden"
                                 style={{
                                     borderColor: promotionNewTier.border,
-                                    boxShadow: `0 0 80px ${promotionNewTier.glow}, 0 0 30px ${promotionNewTier.glow}`,
+                                    boxShadow: `0 24px 60px rgba(0,0,0,0.55)`,
                                     opacity: promotionVisible ? 1 : 0,
-                                    transform: promotionVisible ? 'scale(1) translateY(0)' : 'scale(0.90) translateY(24px)',
+                                    transform: promotionVisible ? 'scale(1) translateY(0)' : 'scale(0.94) translateY(24px)',
                                     transition: 'opacity 0.45s ease, transform 0.45s cubic-bezier(0.34,1.56,0.64,1)',
                                 }}
                             >
-                                {/* Avatar */}
-                                <div className="w-28 h-28 rounded-full mx-auto mb-5 overflow-hidden border-4" style={{ borderColor: promotionNewTier.color, boxShadow: `0 0 30px ${promotionNewTier.glow}` }}>
-                                    <img src={`./MdwnhMembers/${currentUser}.png`} alt={currentUser} className="w-full h-full object-cover" onError={(e) => { e.target.src = AVATAR_FALLBACK; }} />
-                                </div>
+                                {/* Top accent wash in the tier color */}
+                                <div className="absolute inset-x-0 top-0 h-40 pointer-events-none" style={{ background: `linear-gradient(to bottom, ${promotionNewTier.bg}, transparent)` }}></div>
+                                <div className="absolute inset-x-0 top-0 h-1" style={{ background: promotionNewTier.color }}></div>
 
-                                {/* احسنتم */}
-                                <h3 className="text-4xl font-black text-snow mb-1">احسنتم!</h3>
+                                <div className="relative px-8 pt-8 pb-7">
+                                    {/* Kicker */}
+                                    <p className="text-xs font-black tracking-widest mb-5" style={{ color: promotionNewTier.color }}>★ ترقية جديدة ★</p>
 
-                                {/* جزيتم خيرًا */}
-                                <p className="text-xl font-bold mb-6" style={{ color: promotionNewTier.color }}>جزيتم خيرًا!</p>
+                                    {/* Avatar with tier badge */}
+                                    <div className="relative w-24 h-24 mx-auto mb-4">
+                                        <div className="w-24 h-24 rounded-full overflow-hidden border-4" style={{ borderColor: promotionNewTier.color }}>
+                                            <img src={`./MdwnhMembers/${currentUser}.png`} alt={currentUser} className="w-full h-full object-cover" onError={(e) => { e.target.src = AVATAR_FALLBACK; }} />
+                                        </div>
+                                        <div className="absolute -bottom-1 -left-1 w-10 h-10 rounded-full flex items-center justify-center text-xl border-2 border-darker" style={{ background: promotionNewTier.bg, borderColor: promotionNewTier.color }}>
+                                            {promotionNewTier.emoji}
+                                        </div>
+                                    </div>
 
-                                {/* Level card */}
-                                <div className="bg-darker p-5 rounded-2xl border border-snow/10 mb-12">
-                                    <p className="text-lg font-bold text-snow mb-1">تم ترقيتك إلى المستوى {promotionNewTier.level}</p>
-                                    <p className="text-3xl font-black" style={{ color: promotionNewTier.color, textShadow: `0 0 16px ${promotionNewTier.glow}` }}>
-                                        {promotionNewTier.emoji} {promotionNewTier.nameAr}
+                                    {/* Headline */}
+                                    <h3 className="text-3xl font-black text-snow mb-1">احسنتم!</h3>
+                                    <p className="text-sm font-bold text-snow/55 mb-6">جزيتم خيرًا — تم ترقيتكم</p>
+
+                                    {/* Tier name */}
+                                    <p className="text-2xl font-black mb-4" style={{ color: promotionNewTier.color }}>
+                                        {promotionNewTier.nameAr}
                                     </p>
+
+                                    {/* Level progress dots */}
+                                    <div className="flex items-center justify-center gap-2 mb-7" dir="ltr">
+                                        {[1, 2, 3, 4, 5].map(n => (
+                                            <span key={n} className="rounded-full transition-all" style={{
+                                                width: n === promotionNewTier.level ? '28px' : '8px',
+                                                height: '8px',
+                                                background: n <= promotionNewTier.level ? promotionNewTier.color : 'rgba(250,249,247,0.15)'
+                                            }}></span>
+                                        ))}
+                                    </div>
+
+                                    {/* Screenshot note */}
+                                    <p className="text-snow/45 text-xs font-medium mb-5">📸 قم بالتقاط الشاشة وارسالها في التوثيق</p>
+
+                                    {/* Continue button */}
+                                    <button
+                                        onClick={() => { setPromotionVisible(false); setTimeout(() => setShowPromotionModal(false), 420); }}
+                                        className="w-full py-3.5 rounded-full font-black text-lg text-darker transition-all hover:scale-[1.03] active:scale-95"
+                                        style={{ background: promotionNewTier.color }}
+                                    >
+                                        متابعة
+                                    </button>
                                 </div>
-
-                                {/* Screenshot note */}
-                                <p className="text-snow/45 text-sm font-medium mb-7 animate-pulse">قم بالتقاط الشاشة وارسالها في التوثيق 📸</p>
-
-                                {/* Pill continue button */}
-                                <button
-                                    onClick={() => { setPromotionVisible(false); setTimeout(() => setShowPromotionModal(false), 420); }}
-                                    className="w-full py-4 rounded-full font-black text-xl text-darker transition-all hover:scale-105 active:scale-95"
-                                    style={{ background: promotionNewTier.color, boxShadow: `0 8px 28px ${promotionNewTier.glow}` }}
-                                >
-                                    متابعة
-                                </button>
                             </div>
                         </div>
                     )}

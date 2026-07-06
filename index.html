@@ -2079,6 +2079,18 @@
             const userTierConfig = userTierNum ? TIER_CONFIG[userTierNum - 1] : null;
             const activeTierNum = viewedTier !== null ? viewedTier : (userTierNum || 5);
 
+            // High tiers (فضيون / ذهبيون) default to the "عرض الكل" view instead of "مستواي" —
+            // top players want to be seen against the whole board, not just their own small tier.
+            // Fires on login and on promotion; a later manual toggle by the user is left alone
+            // since this effect only re-runs when currentUser or userTierNum actually change.
+            useEffect(() => {
+                if (!currentUser || userTierNum === null) return;
+                if (userTierNum >= 4) {
+                    setLeaderboardView('all');
+                    setViewedTier(null);
+                }
+            }, [currentUser, userTierNum]);
+
             return (
                 <div className="relative min-h-screen overflow-x-hidden">
                     {/* Toast - rendered at top level so it's always fixed above everything */}
@@ -2432,18 +2444,19 @@
                                                                 <div className="flex-1 h-px" style={{ background: `linear-gradient(to left, transparent, ${tc.border})` }}></div>
                                                                 <span className="text-xs font-bold px-2 py-0.5 rounded-full" style={{ color: tc.color, background: tc.bg, border: `1px solid ${tc.border}` }}>المستوى {tc.level}</span>
                                                             </div>
-                                                            <div className="space-y-2">
+                                                            <div className="space-y-3">
                                                                 {tPlayers.map((p, i) => {
+                                                                    const medals = ['🥇', '🥈', '🥉'];
                                                                     const isMe = p.name === currentUser;
                                                                     return (
-                                                                        <div key={p.name} className="flex items-center gap-3 px-4 py-3 rounded-xl border transition-all hover:scale-[1.01]"
+                                                                        <div key={p.name} className="flex items-center gap-4 px-4 py-4 rounded-2xl border-2 transition-all hover:scale-[1.01]"
                                                                             style={isMe ? { background: tc.bg, borderColor: tc.border } : { background: 'rgba(0,0,0,0.18)', borderColor: 'rgba(255,255,255,0.05)' }}>
-                                                                            <span className="font-black text-sm w-5 text-center" style={{ color: i === 0 ? tc.color : 'rgba(250,249,247,0.3)' }}>{i + 1}</span>
-                                                                            <div className="w-10 h-10 rounded-full overflow-hidden bg-raisin shrink-0 border" style={{ borderColor: isMe ? tc.color : 'rgba(255,255,255,0.1)' }}>
+                                                                            <div className="text-3xl w-8 text-center shrink-0">{i < 3 ? medals[i] : <span className="font-black text-base" style={{ color: 'rgba(250,249,247,0.3)' }}>{i + 1}</span>}</div>
+                                                                            <div className="w-14 h-14 rounded-full overflow-hidden bg-raisin shrink-0 border-2" style={{ borderColor: isMe ? tc.color : 'rgba(255,255,255,0.1)' }}>
                                                                                 <img src={`./MdwnhMembers/${p.name}.png`} alt={p.name} className="w-full h-full object-cover" onError={(e) => { e.target.src = AVATAR_FALLBACK; }} />
                                                                             </div>
-                                                                            <span className="font-bold text-snow flex-1 text-sm">{p.name}</span>
-                                                                            <span className="font-black text-lg" style={{ color: tc.color }}>{p.points}</span>
+                                                                            <span className="font-bold text-xl text-snow flex-1">{p.name}</span>
+                                                                            <span className="font-black text-3xl" style={{ color: tc.color }}>{p.points}</span>
                                                                         </div>
                                                                     );
                                                                 })}

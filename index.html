@@ -793,6 +793,10 @@
             { key: 'sticker', label: 'توثيق بملصق', emoji: '📸', color: '#f04e3a' }
         ];
         const AVATAR_FALLBACK = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><rect fill="%23262626" width="100" height="100"/><text x="50" y="55" font-family="sans-serif" font-size="40" text-anchor="middle" fill="%23faf9f7">?</text></svg>';
+        // Bump this whenever avatar files change so installed PWAs (which cache images more
+        // aggressively than a plain browser tab) fetch the new file instead of a stale copy.
+        const AVATAR_V = 2;
+        const avatarSrc = (name) => `./MdwnhMembers/${name}.png?v=${AVATAR_V}`;
 
         const sabhaKey = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
         const toArabicNum = (n) => String(n).replace(/[0-9]/g, (d) => '٠١٢٣٤٥٦٧٨٩'[d]);
@@ -985,7 +989,7 @@
                     <div className="sabha-log-inner">
                         <div className="sabha-log-header">
                             <div className="sabha-log-av">
-                                <img src={`./MdwnhMembers/${user}.png`} alt={user} onError={(e) => { e.target.src = AVATAR_FALLBACK; }} />
+                                <img src={avatarSrc(user)} alt={user} onError={(e) => { e.target.src = AVATAR_FALLBACK; }} />
                             </div>
                             <div className="sabha-log-name">{user}</div>
                             <div className="sabha-log-tag">سجّل يومك ✦</div>
@@ -1055,7 +1059,7 @@
                     <div className="sabha-complete-card">
                         <div className="sabha-complete-ring">
                             <div className="sabha-ring-inner">
-                                <img src={`./MdwnhMembers/${user}.png`} alt={user} onError={(e) => { e.target.src = AVATAR_FALLBACK; }} />
+                                <img src={avatarSrc(user)} alt={user} onError={(e) => { e.target.src = AVATAR_FALLBACK; }} />
                             </div>
                         </div>
                         <h2 className="sabha-complete-title">جزيتم خيرًا!</h2>
@@ -2037,7 +2041,7 @@
                                                         <span className={`sabha-grank ${rankIdx === 0 ? 'top1' : rankIdx === 1 ? 'top2' : rankIdx === 2 ? 'top3' : ''}`}>{rankIdx + 1}</span>
                                                         <div className="sabha-gname-av-wrap">
                                                             <div className="sabha-gname-av">
-                                                                <img src={`./MdwnhMembers/${p.name}.png`} alt={p.name} loading="lazy" onError={(e) => { e.target.src = AVATAR_FALLBACK; }} />
+                                                                <img src={avatarSrc(p.name)} alt={p.name} loading="lazy" onError={(e) => { e.target.src = AVATAR_FALLBACK; }} />
                                                             </div>
                                                             <span className={`sabha-gav-badge ${p.streak > 0 ? 'on' : ''}`}>
                                                                 <span className="bf">🔥</span>
@@ -2083,7 +2087,7 @@
             const userTierEntry = currentUser ? tieredPlayers.find(p => p.name === currentUser) : null;
             const userTierNum = userTierEntry?.tier || null;
             const userTierConfig = userTierNum ? TIER_CONFIG[userTierNum - 1] : null;
-            const activeTierNum = viewedTier !== null ? viewedTier : (userTierNum || 5);
+            const activeTierNum = viewedTier !== null ? viewedTier : (userTierNum || 1);
 
             // High tiers (فضيون / ذهبيون) default to the "عرض الكل" view instead of "مستواي" —
             // top players want to be seen against the whole board, not just their own small tier.
@@ -2152,7 +2156,7 @@
                                                     className="group flex flex-col items-center gap-2 transition-transform hover:-translate-y-1 active:scale-95 disabled:opacity-50"
                                                 >
                                                     <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full border-[3px] border-darker bg-darker overflow-hidden group-hover:border-spanish transition-colors shadow-lg">
-                                                        <img src={`./MdwnhMembers/${name}.png`} alt={name} className="w-full h-full object-cover" loading="lazy" onError={(e) => { e.target.src = AVATAR_FALLBACK; }} />
+                                                        <img src={avatarSrc(name)} alt={name} className="w-full h-full object-cover" loading="lazy" onError={(e) => { e.target.src = AVATAR_FALLBACK; }} />
                                                     </div>
                                                     <span className="text-snow font-bold text-sm tracking-wide bg-darker/80 px-4 py-1.5 rounded-full group-hover:bg-spanish transition-colors">
                                                         {name}
@@ -2203,7 +2207,7 @@
                                         ) : (
                                             <div className="flex items-center gap-4">
                                                 <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full border-2 border-verdigris overflow-hidden bg-raisin shrink-0">
-                                                    <img src={`./MdwnhMembers/${currentUser}.png`} alt={currentUser} className="w-full h-full object-cover" />
+                                                    <img src={avatarSrc(currentUser)} alt={currentUser} className="w-full h-full object-cover" />
                                                 </div>
                                                 <div>
                                                     <p className="text-snow/60 text-sm">مرحباً بك،</p>
@@ -2461,7 +2465,7 @@
                                                                             style={isMe ? { background: tc.bg, borderColor: tc.border } : { background: 'rgba(0,0,0,0.18)', borderColor: 'rgba(255,255,255,0.05)' }}>
                                                                             <div className="text-3xl w-8 text-center shrink-0">{i < 3 ? medals[i] : <span className="font-black text-base" style={{ color: 'rgba(250,249,247,0.3)' }}>{i + 1}</span>}</div>
                                                                             <div className="w-14 h-14 rounded-full overflow-hidden bg-raisin shrink-0 border-2" style={{ borderColor: isMe ? tc.color : 'rgba(255,255,255,0.1)' }}>
-                                                                                <img src={`./MdwnhMembers/${p.name}.png`} alt={p.name} className="w-full h-full object-cover" onError={(e) => { e.target.src = AVATAR_FALLBACK; }} />
+                                                                                <img src={avatarSrc(p.name)} alt={p.name} className="w-full h-full object-cover" onError={(e) => { e.target.src = AVATAR_FALLBACK; }} />
                                                                             </div>
                                                                             <span className="font-bold text-xl text-snow flex-1">{p.name}</span>
                                                                             <span className="font-black text-3xl" style={{ color: tc.color }}>{p.points}</span>
@@ -2506,7 +2510,7 @@
                                                                         style={isMe ? { background: tc.bg, borderColor: tc.border } : { background: 'rgba(0,0,0,0.22)', borderColor: 'rgba(255,255,255,0.07)' }}>
                                                                         <div className="text-3xl w-8 text-center shrink-0">{i < 3 ? medals[i] : <span className="font-black text-base" style={{ color: 'rgba(250,249,247,0.3)' }}>{i + 1}</span>}</div>
                                                                         <div className="w-14 h-14 rounded-full overflow-hidden bg-raisin shrink-0 border-2" style={{ borderColor: isMe ? tc.color : 'rgba(255,255,255,0.1)' }}>
-                                                                            <img src={`./MdwnhMembers/${p.name}.png`} alt={p.name} className="w-full h-full object-cover" onError={(e) => { e.target.src = AVATAR_FALLBACK; }} />
+                                                                            <img src={avatarSrc(p.name)} alt={p.name} className="w-full h-full object-cover" onError={(e) => { e.target.src = AVATAR_FALLBACK; }} />
                                                                         </div>
                                                                         <span className="font-bold text-xl text-snow flex-1">{p.name}</span>
                                                                         <span className="font-black text-3xl" style={{ color: tc.color }}>{p.points}</span>
@@ -2597,7 +2601,7 @@
                                                         displayedHistory.map((log) => (
                                                             <div key={log.id} className="flex gap-4 p-4 rounded-2xl bg-darker/60 border border-snow/5 hover:border-spanish/30 transition-colors">
                                                                 <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full overflow-hidden border border-snow/10 bg-raisin shrink-0">
-                                                                    <img src={`./MdwnhMembers/${log.user}.png`} alt={log.user} className="w-full h-full object-cover" />
+                                                                    <img src={avatarSrc(log.user)} alt={log.user} className="w-full h-full object-cover" />
                                                                 </div>
                                                                 <div className="flex-1">
                                                                     <div className="flex justify-between items-start mb-1">
@@ -2692,7 +2696,7 @@
                         <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/80 backdrop-blur-xl animate-[fadeIn_0.25s_ease-out] px-4">
                             <div className="glass-panel w-full max-w-sm p-8 text-center shadow-[0_30px_80px_rgba(0,0,0,0.8)] border-snow/10 animate-[slideUpFade_0.3s_ease-out]">
                                 <div className="w-20 h-20 rounded-full overflow-hidden mx-auto mb-4 border-2 border-verdigris">
-                                    <img src={`./MdwnhMembers/${pendingUser}.png`} alt={pendingUser} className="w-full h-full object-cover" />
+                                    <img src={avatarSrc(pendingUser)} alt={pendingUser} className="w-full h-full object-cover" />
                                 </div>
                                 <h2 className="text-xl font-black text-snow mb-1">{pendingUser}</h2>
                                 <p className="text-snow/50 text-sm mb-6">
@@ -2919,7 +2923,7 @@
                                 }}
                             >
                                 <img
-                                    src={`./MdwnhMembers/${celebration.user}.png`}
+                                    src={avatarSrc(celebration.user)}
                                     alt="Background Avatar"
                                     className="w-full h-full object-cover animate-pan-quick blur-sm"
                                 />
@@ -2956,7 +2960,7 @@
                                         <div className="relative bg-darker rounded-full p-1 w-full h-full">
                                             <div className="w-full h-full rounded-full overflow-hidden border-4 border-darker">
                                                 <img
-                                                    src={`./MdwnhMembers/${celebration.user}.png`}
+                                                    src={avatarSrc(celebration.user)}
                                                     alt={celebration.user}
                                                     className="w-full h-full object-cover"
                                                 />
@@ -3143,7 +3147,7 @@
                                     <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md animate-explosiveIn p-4">
                                         <div className={`glass-panel w-full max-w-sm p-8 text-center border-2 shadow-[0_0_100px_rgba(0,0,0,0.5)] ${activeWheelType === 'PUNISHMENT' ? 'border-carmine shadow-carmine/20' : 'border-verdigris shadow-verdigris/20'}`}>
                                             <div className={`w-32 h-32 rounded-full mx-auto mb-6 overflow-hidden border-4 ${activeWheelType === 'PUNISHMENT' ? 'border-carmine' : 'border-verdigris'}`}>
-                                                <img src={`./MdwnhMembers/${currentUser}.png`} alt={currentUser} className="w-full h-full object-cover" />
+                                                <img src={avatarSrc(currentUser)} alt={currentUser} className="w-full h-full object-cover" />
                                             </div>
                                             <h3 className={`text-4xl font-black mb-4 ${activeWheelType === 'PUNISHMENT' ? 'text-carmine' : 'text-verdigris'}`}>
                                                 {activeWheelType === 'PUNISHMENT' ? 'صدر الحكم!' : 'مبروووك! 🎉'}
@@ -3200,7 +3204,7 @@
                                             className="group flex flex-col items-center gap-2 transition-transform hover:-translate-y-1 active:scale-95"
                                         >
                                             <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full border-[3px] border-darker bg-darker overflow-hidden group-hover:border-saffron transition-colors shadow-lg">
-                                                <img src={`./MdwnhMembers/${name}.png`} alt={name} className="w-full h-full object-cover" loading="lazy" />
+                                                <img src={avatarSrc(name)} alt={name} className="w-full h-full object-cover" loading="lazy" />
                                             </div>
                                             <span className="text-snow font-bold text-sm tracking-wide bg-darker/80 px-4 py-1.5 rounded-full group-hover:bg-saffron group-hover:text-darker transition-colors">
                                                 {name}
@@ -3237,7 +3241,7 @@
                                         }}
                                     >
                                         <img
-                                            src={`./MdwnhMembers/${special60.user}.png`}
+                                            src={avatarSrc(special60.user)}
                                             alt="Background Avatar"
                                             className="w-full h-full object-cover animate-pan-quick blur-sm"
                                         />
@@ -3281,7 +3285,7 @@
                                                 <div className="relative bg-darker rounded-full p-1 w-full h-full">
                                                     <div className="w-full h-full rounded-full overflow-hidden border-4 border-darker">
                                                         <img
-                                                            src={`./MdwnhMembers/${special60.user}.png`}
+                                                            src={avatarSrc(special60.user)}
                                                             alt={special60.user}
                                                             className="w-full h-full object-cover"
                                                         />
@@ -3338,7 +3342,7 @@
                                 <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md animate-explosiveIn p-4">
                                     <div className="glass-panel w-full max-w-sm p-8 text-center border-2 border-[#8a7ee2] shadow-[0_0_100px_rgba(138,126,226,0.3)]">
                                         <div className="w-32 h-32 rounded-full mx-auto mb-6 overflow-hidden border-4 border-[#8a7ee2]">
-                                            <img src={`./MdwnhMembers/${special60.user}.png`} alt={special60.user} className="w-full h-full object-cover" />
+                                            <img src={avatarSrc(special60.user)} alt={special60.user} className="w-full h-full object-cover" />
                                         </div>
                                         <h3 className="text-4xl font-black mb-4 text-[#8a7ee2]">
                                             مبروووك! 🎉
@@ -3407,7 +3411,7 @@
                                             }}
                                         >
                                             <div className="sabha-pick-av">
-                                                <img src={`./MdwnhMembers/${name}.png`} alt={name} loading="lazy" onError={(e) => { e.target.src = AVATAR_FALLBACK; }} />
+                                                <img src={avatarSrc(name)} alt={name} loading="lazy" onError={(e) => { e.target.src = AVATAR_FALLBACK; }} />
                                             </div>
                                             <span>{name}</span>
                                         </button>
@@ -3501,7 +3505,7 @@
                                     {/* Avatar with tier badge */}
                                     <div className="relative w-24 h-24 mx-auto mb-4">
                                         <div className="w-24 h-24 rounded-full overflow-hidden border-4" style={{ borderColor: promotionNewTier.color }}>
-                                            <img src={`./MdwnhMembers/${currentUser}.png`} alt={currentUser} className="w-full h-full object-cover" onError={(e) => { e.target.src = AVATAR_FALLBACK; }} />
+                                            <img src={avatarSrc(currentUser)} alt={currentUser} className="w-full h-full object-cover" onError={(e) => { e.target.src = AVATAR_FALLBACK; }} />
                                         </div>
                                         <div className="absolute -bottom-1 -left-1 w-10 h-10 rounded-full flex items-center justify-center text-xl border-2 border-darker" style={{ background: promotionNewTier.bg, borderColor: promotionNewTier.color }}>
                                             {promotionNewTier.emoji}

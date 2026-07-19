@@ -709,8 +709,11 @@
         };
 
         const MEMBERS = [
-            "الشعيرة", "جمانة", "خالد حسن", "خالد", "رجب", "سحاب", "سعيد", "شارد", "شفق", "طه", "عاصم", "أبو بندر", "ابو مزاحم", "علي مجدي", "عمر", "فرات", "مايتو", "محمد سمير", "مصطفى", "ملك", "منة", "مورو", "نجود", "ورقاء", "يوسف"
+            "الشعيرة", "جمانة", "خالد حسن", "خالد", "رجب", "سحاب", "سعيد", "شارد", "شفق", "طه", "عاصم", "أبو بندر", "ابو مزاحم", "علي مجدي", "عمر", "فرات", "مايتو", "محمد سمير", "مصطفى", "ملك", "منة", "مورو", "نجود", "ورقاء", "يوسف", "أُبي", "عبدالله"
         ];
+
+        // Login picker only — نواف opens صحبة الفجر but never earns points, so he stays out of MEMBERS.
+        const LOGIN_MEMBERS = [...MEMBERS, "نواف"];
 
         const PUNISHMENTS = [
             "امشي ١٠.٠٠٠ آلاف خطوة.",
@@ -1256,9 +1259,10 @@
             // Restore saved login on mount (skip password re-entry since already authenticated)
             useEffect(() => {
                 const saved = localStorage.getItem("mdwnh_user");
-                if (saved && MEMBERS.includes(saved)) {
+                if (saved && LOGIN_MEMBERS.includes(saved)) {
                     setCurrentUser(saved);
                     setSabhaMe(saved);
+                    if (saved === "نواف") setUserTab('fajr');
                 } else {
                     const savedMe = localStorage.getItem("sabha_me");
                     if (savedMe) setSabhaMe(savedMe);
@@ -1369,6 +1373,7 @@
                 }
                 setCurrentUser(name);
                 setSabhaMe(name);
+                if (name === "نواف") setUserTab('fajr');
                 try { localStorage.setItem('sabha_me', name); } catch(e) {}
                 localStorage.setItem("mdwnh_user", name);
                 setPendingUser(null);
@@ -2071,6 +2076,7 @@
             const top3 = players.slice(0, 3);
             const activeActionUser = adminMode ? (targetUser || "اختر عضواً") : currentUser;
             const showSelection = (!currentUser && !adminMode && !showPasswordPrompt && !memberPasswordMode);
+            const isFajrOnlyUser = currentUser === "نواف";
 
             // Tier system: assign each player a level 1-5 (top 5 = level 5, etc.)
             const tieredPlayers = players.map((p, i) => ({ ...p, rank: i + 1, tier: Math.max(1, 5 - Math.floor(i / 5)) }));
@@ -2138,7 +2144,7 @@
                                         </div>
 
                                         <div className="flex flex-wrap justify-center gap-4 sm:gap-5 max-w-2xl mx-auto mt-2">
-                                            {MEMBERS.filter(n => n !== 'نواف').map((name) => (
+                                            {LOGIN_MEMBERS.map((name) => (
                                                 <button
                                                     key={name}
                                                     onClick={() => selectUser(name)}
@@ -2209,6 +2215,7 @@
                                                             </span>
                                                         )}
                                                     </div>
+                                                    {!isFajrOnlyUser && (
                                                     <div className="flex items-center gap-2 mt-1 overflow-visible">
                                                         <span className="text-snow/50 text-xs">نقاطك الحالية:</span>
                                                         <span
@@ -2221,12 +2228,13 @@
                                                             }}
                                                         >{players.find(p => p.name === currentUser)?.points ?? 0}</span>
                                                     </div>
+                                                    )}
                                                 </div>
                                             </div>
                                         )}
                                     </div>
                                     <div className="flex flex-wrap gap-2 justify-center sm:justify-end">
-                                        {!adminMode && (
+                                        {!adminMode && !isFajrOnlyUser && (
                                             <>
                                                 <button
                                                     onClick={() => setShowWheelModal(true)}
@@ -2246,8 +2254,8 @@
                                     </div>
                                 </header>
 
-                                {/* Tab switcher — user panel only (not admin) */}
-                                {!adminMode && (
+                                {/* Tab switcher — user panel only (not admin); فجر-only user has just the one tab */}
+                                {!adminMode && !isFajrOnlyUser && (
                                     <div className="flex justify-center -mt-2">
                                         <div className="sabha-tabbar">
                                             <button className={`sabha-tab points ${userTab === 'points' ? 'is-active' : ''}`} onClick={() => setUserTab('points')}>نقاط</button>
@@ -2256,8 +2264,8 @@
                                     </div>
                                 )}
 
-                                {/* Points tab (always visible for admin, toggled for regular users) */}
-                                {(adminMode || userTab === 'points') && (<>
+                                {/* Points tab (always visible for admin, toggled for regular users; never for the فجر-only user) */}
+                                {(adminMode || userTab === 'points') && !isFajrOnlyUser && (<>
 
                                 {/* Achievements block: compact header sits OUTSIDE / above the panel (member view) */}
                                 <div>

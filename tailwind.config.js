@@ -61,9 +61,8 @@ module.exports = {
                 "100%": { transform: "translateY(0)" }
             },
             crownFall: {
-                "0%": { transform: "translateX(-50%) translateY(-400px)" },
-                "60%": { transform: "translateX(-50%) translateY(15px)" },
-                "100%": { transform: "translateX(-50%) translateY(8px)" }
+                "0%": { transform: "translateX(-50%) translateY(-500px)" },
+                "100%": { transform: "translateX(-50%) translateY(0)" }
             },
             cameraShake: {
                 "0%, 100%": { transform: "translate(0, 0)" },
@@ -96,7 +95,7 @@ module.exports = {
             "pan-quick": "panHorizontal 6s linear infinite alternate",
             "sparkle-up": "sparkleUp 8s linear infinite",
             "crown-snap": "crownSnap 1s cubic-bezier(0, 0.95, 0.15, 1) forwards",
-            "crown-fall": "crownFall 0.7s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards",
+            "crown-fall": "crownFall 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) forwards",
             "camera-shake": "cameraShake 0.4s ease-out",
             "logo-in": "logoIn 1s ease-out forwards"
         }

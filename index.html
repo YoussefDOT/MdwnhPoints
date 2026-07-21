@@ -1322,9 +1322,10 @@
             useEffect(() => {
                 if (!db || !currentUser) { setLibraryClaims([]); return; }
                 let cancelled = false;
+                const claimKey = (() => { try { return currentUser.normalize('NFC'); } catch (e) { return currentUser; } })();
                 (async () => {
                     try {
-                        const snap = await get(ref(db, 'mdwnhLibrary/claims/' + currentUser));
+                        const snap = await get(ref(db, 'mdwnhLibrary/claims/' + claimKey));
                         if (cancelled) return;
                         const val = snap.exists() ? snap.val() : null;
                         if (!val) { setLibraryClaims([]); return; }
@@ -1342,7 +1343,8 @@
                 if (claimBusy || !claim) return;
                 setClaimBusy(true);
                 const key = claim._key || claim.taskId;
-                try { await remove(ref(db, 'mdwnhLibrary/claims/' + currentUser + '/' + key)); }
+                const ck = (() => { try { return currentUser.normalize('NFC'); } catch (e) { return currentUser; } })();
+                try { await remove(ref(db, 'mdwnhLibrary/claims/' + ck + '/' + key)); }
                 catch (e) { console.warn('[claim] remove failed', e); }
                 setLibraryClaims((prev) => prev.filter((c) => (c._key || c.taskId) !== key));
                 setClaimBusy(false);

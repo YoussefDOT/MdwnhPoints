@@ -1217,6 +1217,29 @@
             const [promotionVisible, setPromotionVisible] = useState(false); // CSS transition trigger
             const [pendingPromotion, setPendingPromotion] = useState(null); // queued until anim done
 
+            // ---- مكتبة المدوّنة task claims (points earned by finishing a Library task) ----
+            const [libraryClaims, setLibraryClaims] = useState([]); // [{taskId,title,points,color,_key}]
+            const [claimBusy, setClaimBusy] = useState(false);
+
+            // Match a name coming from the Library (URL / DB key) to a real login member.
+            // Robust to diacritics (أُبي) and hamza/alef spelling (أبو بندر, ابو مزاحم).
+            const resolveMemberName = (raw) => {
+                if (!raw) return null;
+                let dec = raw; try { dec = decodeURIComponent(raw); } catch (e) {}
+                const norm = (s) => (s || '').normalize('NFC').replace(/\s+/g, ' ').trim();
+                const loose = (s) => norm(s).normalize('NFD')
+                    .replace(/[ً-ٰٟ]/g, '')   // strip harakat + superscript alef
+                    .replace(/[آأإ]/g, 'ا') // آأإ -> ا
+                    .replace(/ى/g, 'ي')              // ى -> ي
+                    .replace(/ة/g, 'ه');             // ة -> ه
+                const target = norm(dec);
+                let hit = LOGIN_MEMBERS.find((m) => norm(m) === target);
+                if (hit) return hit;
+                const lt = loose(dec);
+                hit = LOGIN_MEMBERS.find((m) => loose(m) === lt);
+                return hit || null;
+            };
+
             useEffect(() => {
                 const playersRef = ref(db, 'players');
                 const unsubscribe = onValue(playersRef, (snapshot) => {
@@ -1272,6 +1295,61 @@
                     if (savedMe) setSabhaMe(savedMe);
                 }
             }, []);
+
+            // Arriving from the Library with ?user=<name>&claim=1 — log the member in
+            // automatically (the Library already authenticated them) so they land on
+            // their own points page, then clean the URL so a refresh won't re-fire.
+            useEffect(() => {
+                if (!db) return;
+                let params; try { params = new URLSearchParams(window.location.search); } catch (e) { return; }
+                const rawUser = params.get('user');
+                const wantsClaim = params.has('claim');
+                if (rawUser && !localStorage.getItem("mdwnh_user")) {
+                    const resolved = resolveMemberName(rawUser);
+                    if (resolved) {
+                        finishMemberLogin(resolved); // bypasses the member password on purpose
+                    } else {
+                        try { showToast('لم نتعرّف على اسمك تلقائيًا — اختر اسمك للمتابعة واستلام نقاطك'); } catch (e) {}
+                    }
+                }
+                if ((rawUser || wantsClaim) && window.history && window.history.replaceState) {
+                    window.history.replaceState({}, '', window.location.pathname);
+                }
+            }, [db]);
+
+            // Pull pending Library task-claims for whoever is logged in (works whether they
+            // just auto-logged-in from a claim link or opened the site normally).
+            useEffect(() => {
+                if (!db || !currentUser) { setLibraryClaims([]); return; }
+                let cancelled = false;
+                (async () => {
+                    try {
+                        const snap = await get(ref(db, 'mdwnhLibrary/claims/' + currentUser));
+                        if (cancelled) return;
+                        const val = snap.exists() ? snap.val() : null;
+                        if (!val) { setLibraryClaims([]); return; }
+                        const list = Object.keys(val).map((k) => ({ ...val[k], _key: k, taskId: (val[k] && val[k].taskId) || k }));
+                        list.sort((a, b) => (a.ts || 0) - (b.ts || 0));
+                        setLibraryClaims(list);
+                    } catch (e) { if (!cancelled) console.warn('[claim] read failed', e); }
+                })();
+                return () => { cancelled = true; };
+            }, [db, currentUser]);
+
+            // Settle one claim: delete it first (so a replay can't double-award), then run
+            // the normal point-award sequence for its sticker value.
+            const claimNow = async (claim) => {
+                if (claimBusy || !claim) return;
+                setClaimBusy(true);
+                const key = claim._key || claim.taskId;
+                try { await remove(ref(db, 'mdwnhLibrary/claims/' + currentUser + '/' + key)); }
+                catch (e) { console.warn('[claim] remove failed', e); }
+                setLibraryClaims((prev) => prev.filter((c) => (c._key || c.taskId) !== key));
+                setClaimBusy(false);
+                try { setAchievementNote(claim.title || ''); } catch (e) {}
+                addPoints(Number(claim.points) || 0); // awards to currentUser + plays the sequence
+            };
+            const claimLater = () => setLibraryClaims([]);
 
             // Promotion detection: queue a pending promotion but don't show yet
             useEffect(() => {
@@ -3549,6 +3627,36 @@
                             </div>
                         </div>
                     )}
+                    {/* ===== مكتبة المدوّنة — claim a finished-task's points ===== */}
+                    {(() => {
+                        const claim = libraryClaims[0];
+                        const show = claim && !isAddingPoints && !special60.isActive && celebration === null && !isPageSuckingIn && !showPromotionModal;
+                        if (!show) return null;
+                        const accent = claim.color || '#3bb9ab';
+                        return (
+                            <div className="fixed inset-0 z-[9998] flex items-center justify-center p-6" style={{ background: 'rgba(0,0,0,0.74)', backdropFilter: 'blur(8px)' }}>
+                                <div className="glass-panel w-full max-w-sm text-center relative overflow-hidden" style={{ borderColor: accent, boxShadow: '0 24px 60px rgba(0,0,0,0.6)' }}>
+                                    <div className="absolute inset-x-0 top-0 h-40 pointer-events-none" style={{ background: `linear-gradient(to bottom, ${accent}33, transparent)` }}></div>
+                                    <div className="absolute inset-x-0 top-0 h-1" style={{ background: accent }}></div>
+                                    <div className="relative px-8 pt-8 pb-7">
+                                        <p className="text-xs font-black tracking-widest mb-4" style={{ color: accent }}>✦ مهمة مكتملة ✦</p>
+                                        <div className="w-20 h-20 rounded-full overflow-hidden border-4 mx-auto mb-3" style={{ borderColor: accent }}>
+                                            <img src={avatarSrc(currentUser)} alt={currentUser} className="w-full h-full object-cover" onError={(e) => { e.target.src = AVATAR_FALLBACK; }} />
+                                        </div>
+                                        <h3 className="text-2xl font-black text-snow mb-1">أحسنت، {getFirstName(currentUser)}!</h3>
+                                        <p className="text-sm font-bold text-snow/55 mb-4">أتممت «{claim.title}»</p>
+                                        <img src={`./points-stickers/${claim.points}.webp`} alt={`${claim.points} نقطة`} className="w-28 h-28 object-contain mx-auto mb-4" style={{ filter: 'drop-shadow(0 14px 26px rgba(0,0,0,0.5))' }} onError={(e) => { e.target.style.display = 'none'; }} />
+                                        <p className="text-snow/70 text-sm font-bold mb-5">بانتظارك <span style={{ color: '#f4c82b' }}>+{claim.points}</span> نقطة</p>
+                                        <button onClick={() => claimNow(claim)} disabled={claimBusy} className="w-full py-3.5 rounded-full font-black text-lg text-darker transition-all hover:scale-[1.03] active:scale-95 disabled:opacity-60" style={{ background: accent }}>
+                                            {claimBusy ? '…' : 'استلم نقاطك'}
+                                        </button>
+                                        <button onClick={claimLater} className="w-full py-2.5 mt-2 rounded-full font-bold text-sm text-snow/60 hover:text-snow transition-colors">لاحقًا</button>
+                                        {libraryClaims.length > 1 && <p className="text-snow/40 text-xs font-bold mt-3">ولديك {libraryClaims.length - 1} أخرى بعدها</p>}
+                                    </div>
+                                </div>
+                            </div>
+                        );
+                    })()}
                 </div>
             );
         }

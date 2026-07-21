@@ -1348,8 +1348,10 @@
                 catch (e) { console.warn('[claim] remove failed', e); }
                 setLibraryClaims((prev) => prev.filter((c) => (c._key || c.taskId) !== key));
                 setClaimBusy(false);
-                try { setAchievementNote(claim.title || ''); } catch (e) {}
-                addPoints(Number(claim.points) || 0); // awards to currentUser + plays the sequence
+                // Pass the title straight through instead of via setAchievementNote: that
+                // state update is async, so addPoints (called on the very next line, same
+                // tick) would still see the pre-update value and log an empty note.
+                addPoints(Number(claim.points) || 0, { note: claim.title || '' });
             };
             const claimLater = () => setLibraryClaims([]);
 
@@ -1918,10 +1920,10 @@
                 }
             };
 
-            const addPoints = (amount) => {
+            const addPoints = (amount, options = {}) => {
                 const person = adminMode && targetUser ? targetUser : currentUser;
                 if (!person) return;
-                
+
                 if (amount === 60) {
                     setIsAddingPoints(true);
                     setAddingPointsLabel(60);
@@ -1986,7 +1988,7 @@
                                     await push(historyDbRef, {
                                         user: person,
                                         amount: 60,
-                                        note: achievementNote || "",
+                                        note: options.note || achievementNote || "",
                                         timestamp: Date.now(),
                                         isWheel: false,
                                         isPunishment: false
@@ -2040,7 +2042,7 @@
                         startAnimation();
                     });
                 } else {
-                    performAddPoints(amount, person);
+                    performAddPoints(amount, person, options);
                 }
             };
 

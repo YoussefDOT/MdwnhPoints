@@ -54,7 +54,32 @@ module.exports = {
             sparkleUp: {
                 "0%": { transform: "scale(0) translateY(0)", opacity: "0" },
                 "10%": { opacity: "1" },
-                "100%": { transform: "scale(1) translateY(-150px)", opacity: "0.5" }
+                "100%": { transform: "scale(1) translateY(-150px)", opacity: "0" }
+            },
+            crownSnap: {
+                "0%": { transform: "translateY(200px)" },
+                "100%": { transform: "translateY(0)" }
+            },
+            crownFall: {
+                "0%": { transform: "translateX(-50%) translateY(-400px)" },
+                "60%": { transform: "translateX(-50%) translateY(15px)" },
+                "100%": { transform: "translateX(-50%) translateY(8px)" }
+            },
+            cameraShake: {
+                "0%, 100%": { transform: "translate(0, 0)" },
+                "10%": { transform: "translate(-5px, -5px)" },
+                "20%": { transform: "translate(5px, 5px)" },
+                "30%": { transform: "translate(-5px, 5px)" },
+                "40%": { transform: "translate(5px, -5px)" },
+                "50%": { transform: "translate(-3px, -3px)" },
+                "60%": { transform: "translate(3px, 3px)" },
+                "70%": { transform: "translate(-2px, 2px)" },
+                "80%": { transform: "translate(2px, -2px)" },
+                "90%": { transform: "translate(-1px, 1px)" }
+            },
+            logoIn: {
+                "0%": { transform: "translateY(-20px)", opacity: "0" },
+                "100%": { transform: "translateY(0)", opacity: "1" }
             }
         },
         animation: {
@@ -68,8 +93,12 @@ module.exports = {
             "fade-in": "fadeIn 0.5s ease-out",
             "fade-out": "fadeOut 0.7s ease-in forwards",
             "white-flash": "whiteFlash 0.4s ease-out forwards",
-            "pan-quick": "panHorizontal 6s linear forwards",
-            "sparkle-up": "sparkleUp 8s linear forwards"
+            "pan-quick": "panHorizontal 6s linear infinite alternate",
+            "sparkle-up": "sparkleUp 8s linear infinite",
+            "crown-snap": "crownSnap 1s cubic-bezier(0, 0.95, 0.15, 1) forwards",
+            "crown-fall": "crownFall 0.7s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards",
+            "camera-shake": "cameraShake 0.4s ease-out",
+            "logo-in": "logoIn 1s ease-out forwards"
         }
     }
   },

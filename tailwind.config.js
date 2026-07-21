@@ -95,7 +95,7 @@ module.exports = {
             "pan-quick": "panHorizontal 6s linear infinite alternate",
             "sparkle-up": "sparkleUp 8s linear infinite",
             "crown-snap": "crownSnap 1s cubic-bezier(0, 0.95, 0.15, 1) forwards",
-            "crown-fall": "crownFall 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) forwards",
+            "crown-fall": "crownFall 0.26s cubic-bezier(0.18, 1.8, 0.4, 1) forwards",
             "camera-shake": "cameraShake 0.4s ease-out",
             "logo-in": "logoIn 1s ease-out forwards"
         }

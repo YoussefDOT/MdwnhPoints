@@ -1946,7 +1946,9 @@
                                 setShowSparkles(true);
                                 
                                 // Crown falls on avatar at exactly 12 seconds
-                                setTimeout(() => setSpecial60(prev => ({ ...prev, showAvatarCrown: true, cameraShake: true })), 2300);
+                                setTimeout(() => setSpecial60(prev => ({ ...prev, showAvatarCrown: true })), 2300);
+                                // Screen shake fires when the crown actually lands (crown-fall duration later)
+                                setTimeout(() => setSpecial60(prev => ({ ...prev, cameraShake: true })), 2560);
                                 setTimeout(() => {
                                     setSpecial60(prev => ({ ...prev, showContinue: true }));
                                     setIsAddingPoints(false);

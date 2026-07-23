@@ -709,7 +709,7 @@
         };
 
         const MEMBERS = [
-            "الشعيرة", "جمانة", "خالد حسن", "خالد", "رجب", "سحاب", "سعيد", "شارد", "شفق", "طه", "عاصم", "أبو بندر", "ابو مزاحم", "علي مجدي", "عمر", "فرات", "مايتو", "محمد سمير", "مصطفى", "ملك", "منة", "مورو", "نجود", "ورقاء", "يوسف", "أُبي", "عبدالله"
+            "الشعيرة", "جمانة", "خالد حسن", "خالد", "رجب", "سحاب", "شارد", "شفق", "طه", "عاصم", "أبو بندر", "ابو مزاحم", "علي مجدي", "عمر", "فرات", "مايتو", "محمد سمير", "مصطفى", "ملك", "منة", "مورو", "نجود", "ورقاء", "يوسف", "أُبي", "عبدالله"
         ];
 
         // Login picker only — نواف opens صحبة الفجر but never earns points, so he stays out of MEMBERS.
@@ -796,7 +796,33 @@
         // Bump this whenever avatar files change so installed PWAs (which cache images more
         // aggressively than a plain browser tab) fetch the new file instead of a stale copy.
         const AVATAR_V = 2;
-        const avatarSrc = (name) => `./MdwnhMembers/${name}.png?v=${AVATAR_V}`;
+        // Shared team roster — single source of truth (github.com/mdwnstudio/MdwnhMembers).
+        // SLUG_BY_KEY maps a DB key (Arabic name) -> ASCII avatar slug; filled from members.json
+        // before render. Empty until then, so avatars fall back to the bundled local files.
+        const ROSTER_BASE = 'https://raw.githubusercontent.com/mdwnstudio/MdwnhMembers/main';
+        const SLUG_BY_KEY = {};   // "الشعيرة" -> "al-shaeera"
+        const NAME_BY_SLUG = {};  // "al-shaeera" -> "الشعيرة"
+        const avatarSrc = (name) => SLUG_BY_KEY[name]
+            ? `${ROSTER_BASE}/avatars/${SLUG_BY_KEY[name]}.png`
+            : `./MdwnhMembers/${name}.png?v=${AVATAR_V}`;
+        // Layered avatar fallback (remote roster -> bundled local -> placeholder), applied to
+        // every <img> at once. Runs in the document capture phase, ahead of React's own onError,
+        // so we own the fallback chain.
+        document.addEventListener('error', function (e) {
+            const img = e.target;
+            if (!img || img.tagName !== 'IMG') return;
+            const src = String(img.src);
+            if (src.indexOf(ROSTER_BASE) === 0) {
+                e.stopPropagation();
+                const slug = src.slice(src.lastIndexOf('/') + 1).replace(/\.png.*$/, '');
+                const name = NAME_BY_SLUG[slug] || decodeURIComponent(slug);
+                img.src = `./MdwnhMembers/${name}.png?v=${AVATAR_V}`;
+            } else if (src.indexOf('/MdwnhMembers/') !== -1) {
+                e.stopPropagation();
+                img.onerror = null;
+                img.src = AVATAR_FALLBACK;
+            }
+        }, true);
 
         const sabhaKey = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
         const toArabicNum = (n) => String(n).replace(/[0-9]/g, (d) => '٠١٢٣٤٥٦٧٨٩'[d]);
@@ -3666,7 +3692,19 @@
         }
 
         const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<App />);
+        // Pull the shared roster first so avatars resolve to the central repo (with local
+        // fallback). Never block the app on it — render even if the fetch fails.
+        fetch(`${ROSTER_BASE}/members.json`, { cache: 'no-cache' })
+            .then(r => { if (!r.ok) throw 0; return r.json(); })
+            .then(data => {
+                data.members.forEach(m => {
+                    if (m.dummy) return;
+                    SLUG_BY_KEY[m.dbKey] = m.slug;
+                    NAME_BY_SLUG[m.slug] = m.dbKey;
+                });
+            })
+            .catch(() => {})
+            .finally(() => root.render(<App />));
     </script>
 
     <!-- Failsafe watchdog: if the app never renders (e.g. an in-browser compile/runtime error),

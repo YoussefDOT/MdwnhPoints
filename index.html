@@ -534,6 +534,20 @@
         }
         .sabha-datechip .d-day { font-weight: 900; font-size: 14px; }
         .sabha-datechip .d-num { font-size: 12px; opacity: 0.8; }
+        /* Already-logged day: still tappable, but marked with its saved score so it reads as "edit me" */
+        .sabha-datechip { position: relative; }
+        .sabha-datechip.is-logged { border-color: rgba(59, 185, 171, 0.35); }
+        .sabha-datechip.is-logged .d-badge {
+            position: absolute; top: -7px; inset-inline-end: -7px;
+            min-width: 19px; height: 19px; padding: 0 4px; border-radius: 10px;
+            background: #3bb9ab; color: #0b1824; font-size: 11px; font-weight: 900;
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+        }
+        .sabha-edit-hint {
+            margin: -14px 0 20px; text-align: center;
+            font-size: 0.76rem; font-weight: 700; color: rgba(59, 185, 171, 0.85);
+        }
 
         /* ---- Activity pills: 2×2 grid, one brand color each ---- */
         .sabha-pills { display: grid; grid-template-columns: 1fr 1fr; gap: 13px; margin-bottom: 26px; }
@@ -911,16 +925,23 @@
             const { ref, set } = window.firebaseModular;
             const today = sabhaStartOfToday();
 
-            // Fixed window: today + the 3 days before it. Skip days already logged.
+            // Fixed window: today + the 3 days before it. Days already logged stay in the
+            // list so they can be re-opened and edited; anything older is out of reach.
             const candidates = [];
             for (let off = 0; off <= 3; off++) {
                 const d = new Date(today); d.setDate(d.getDate() - off);
                 const k = sabhaKey(d);
-                if (!entries || !entries[k]) candidates.push({ date: d, key: k });
+                candidates.push({ date: d, key: k, entry: (entries && entries[k]) || null });
             }
+            const pillsOf = (entry) => ({
+                fajr: !!(entry && entry.fajr), sleep: !!(entry && entry.sleep),
+                morning: !!(entry && entry.morning), sticker: !!(entry && entry.sticker)
+            });
 
-            const [selectedKey, setSelectedKey] = useState(candidates[0] ? candidates[0].key : sabhaKey(today));
-            const [pills, setPills] = useState({ fajr: false, sleep: false, morning: false, sticker: false });
+            // Land on the first day that still needs logging; if all four are done, open today for editing.
+            const firstOpen = candidates.find(c => !c.entry) || candidates[0];
+            const [selectedKey, setSelectedKey] = useState(firstOpen.key);
+            const [pills, setPills] = useState(pillsOf(firstOpen.entry));
             const [submitting, setSubmitting] = useState(false);
             const [closing, setClosing] = useState(false);
             const soundsRef = useRef([]);
@@ -982,13 +1003,19 @@
                 setPills(prev => ({ ...prev, [key]: !prev[key] }));
             };
 
+            // Switching days loads that day's saved state, so a logged day opens ready to edit.
             const changeDate = (k) => {
+                const c = candidates.find(x => x.key === k);
                 setSelectedKey(k);
-                setPills({ fajr: false, sleep: false, morning: false, sticker: false });
+                setPills(pillsOf(c && c.entry));
             };
 
             const count = (pills.fajr ? 1 : 0) + (pills.sleep ? 1 : 0) + (pills.morning ? 1 : 0) + (pills.sticker ? 1 : 0);
             const requestClose = (cb) => { setClosing(true); setTimeout(cb, 330); };
+
+            const selected = candidates.find(c => c.key === selectedKey) || candidates[0];
+            const editing = !!(selected && selected.entry);
+            const wasComplete = !!(selected && selected.entry && (selected.entry.points || 0) === 4);
 
             const submit = async () => {
                 if (count === 0 || submitting) return;
@@ -1000,15 +1027,14 @@
                     };
                     await set(ref(db, `sabha_fajr/${user}/${selectedKey}`), payload);
                     try { const a = new Audio('./sounds/Suhba/اكمال.mp3'); a.volume = 0.7; a.play().catch(() => {}); } catch (e) {}
-                    if (count === 4) requestClose(() => onComplete(user));
-                    else requestClose(onLogged);
+                    // Celebrate a fresh 4/4 only — re-saving an already-complete day stays quiet.
+                    if (count === 4 && !wasComplete) requestClose(() => onComplete(user));
+                    else requestClose(() => onLogged(editing));
                 } catch (e) {
                     alert('تعذر التسجيل: ' + e.message);
                     setSubmitting(false);
                 }
             };
-
-            const allLogged = candidates.length === 0;
 
             return (
                 <div className={`sabha-log ${closing ? 'closing' : ''}`}>
@@ -1018,60 +1044,54 @@
                                 <img src={avatarSrc(user)} alt={user} onError={(e) => { e.target.src = AVATAR_FALLBACK; }} />
                             </div>
                             <div className="sabha-log-name">{user}</div>
-                            <div className="sabha-log-tag">سجّل يومك ✦</div>
+                            <div className="sabha-log-tag">{editing ? 'عدّل يومك ✎' : 'سجّل يومك ✦'}</div>
                         </div>
 
-                        {allLogged ? (
-                            <div style={{ textAlign: 'center' }}>
-                                <div className="sabha-empty">ما شاء الله، لقد سجّلت كل أيامك المتاحة ✓</div>
-                                <button className="sabha-back" onClick={() => requestClose(onClose)}>رجوع</button>
-                            </div>
-                        ) : (
-                            <>
-                                <div className="sabha-dates">
-                                    {candidates.map(c => {
-                                        const isToday = c.key === sabhaKey(today);
-                                        return (
-                                            <button
-                                                key={c.key}
-                                                onClick={() => changeDate(c.key)}
-                                                className={`sabha-datechip ${selectedKey === c.key ? 'is-active' : ''}`}
-                                            >
-                                                <span className="d-day">{isToday ? 'اليوم' : SABHA_WEEKDAYS[c.date.getDay()]}</span>
-                                                <span className="d-num">{toArabicNum(c.date.getDate())}</span>
-                                            </button>
-                                        );
-                                    })}
-                                </div>
+                        <div className="sabha-dates">
+                            {candidates.map(c => {
+                                const isToday = c.key === sabhaKey(today);
+                                return (
+                                    <button
+                                        key={c.key}
+                                        onClick={() => changeDate(c.key)}
+                                        className={`sabha-datechip ${selectedKey === c.key ? 'is-active' : ''} ${c.entry ? 'is-logged' : ''}`}
+                                    >
+                                        {c.entry && <span className="d-badge">{toArabicNum(c.entry.points || 0)}</span>}
+                                        <span className="d-day">{isToday ? 'اليوم' : SABHA_WEEKDAYS[c.date.getDay()]}</span>
+                                        <span className="d-num">{toArabicNum(c.date.getDate())}</span>
+                                    </button>
+                                );
+                            })}
+                        </div>
 
-                                <div className="sabha-pills">
-                                    {SABHA_ACTIVITIES.map(a => (
-                                        <button
-                                            key={a.key}
-                                            onClick={(ev) => togglePill(a.key, a.color, ev)}
-                                            className={`sabha-pill ${pills[a.key] ? 'on' : ''}`}
-                                            style={{ '--pc': a.color }}
-                                        >
-                                            <span className="sabha-pill-emoji">{a.emoji}</span>
-                                            <span className="sabha-pill-label">{a.label}</span>
-                                            <span className="sabha-pill-check">✓</span>
-                                        </button>
-                                    ))}
-                                </div>
+                        {editing && <p className="sabha-edit-hint">أنت تعدّل يومًا سجّلته سابقًا — عدّل البنود ثم احفظ</p>}
 
-                                <button className="sabha-submit" onClick={submit} disabled={count === 0 || submitting}>
-                                    {submitting ? <div className="loader"></div> : <>سجّل ✓</>}
+                        <div className="sabha-pills">
+                            {SABHA_ACTIVITIES.map(a => (
+                                <button
+                                    key={a.key}
+                                    onClick={(ev) => togglePill(a.key, a.color, ev)}
+                                    className={`sabha-pill ${pills[a.key] ? 'on' : ''}`}
+                                    style={{ '--pc': a.color }}
+                                >
+                                    <span className="sabha-pill-emoji">{a.emoji}</span>
+                                    <span className="sabha-pill-label">{a.label}</span>
+                                    <span className="sabha-pill-check">✓</span>
                                 </button>
-                                <button className="sabha-back" onClick={() => requestClose(onClose)}>رجوع</button>
-                                <p className="sabha-rules-note">
-                                    اليوم فيه ٤ نقاط، كل بند نقطة:<br />
-                                    🌙 النوم الباكر «قبل ١٢ص»<br />
-                                    🌅 صلاة الفجر «قبل الشروق»<br />
-                                    💼 عمل الصباح «مدونة، تدريب، مذاكرة»<br />
-                                    📌 التوثيق بملصق «روم توثيق الروتين»
-                                </p>
-                            </>
-                        )}
+                            ))}
+                        </div>
+
+                        <button className="sabha-submit" onClick={submit} disabled={count === 0 || submitting}>
+                            {submitting ? <div className="loader"></div> : (editing ? <>احفظ التعديل ✓</> : <>سجّل ✓</>)}
+                        </button>
+                        <button className="sabha-back" onClick={() => requestClose(onClose)}>رجوع</button>
+                        <p className="sabha-rules-note">
+                            اليوم فيه ٤ نقاط، كل بند نقطة:<br />
+                            🌙 النوم الباكر «قبل ١٢ص»<br />
+                            🌅 صلاة الفجر «قبل الشروق»<br />
+                            💼 عمل الصباح «مدونة، تدريب، مذاكرة»<br />
+                            📌 التوثيق بملصق «روم توثيق الروتين»
+                        </p>
                     </div>
                 </div>
             );
@@ -3540,20 +3560,21 @@
                                     {sabhaAlreadyLoggedWarning.done ? 'سجّلت كل أيامك المتاحة!' : 'سجّلت اليوم مسبقًا!'}
                                 </h3>
                                 {sabhaAlreadyLoggedWarning.done ? (
-                                    <p style={{ fontSize: '0.82rem', color: 'rgba(250,249,247,0.5)', margin: '12px 0 24px' }}>لقد سجّلت اليوم وآخر 3 أيام بالكامل</p>
+                                    <>
+                                        <p style={{ fontSize: '0.87rem', color: 'rgba(250,249,247,0.6)', margin: '12px 0 6px' }}>لقد سجّلت اليوم وآخر 3 أيام بالكامل</p>
+                                        <p style={{ fontSize: '0.72rem', color: 'rgba(250,249,247,0.35)', margin: '0 0 24px' }}>يمكنك تعديل هذه الأيام فقط</p>
+                                    </>
                                 ) : (
                                     <>
-                                        <p style={{ fontSize: '0.87rem', color: 'rgba(250,249,247,0.6)', margin: '10px 0 6px' }}>هل تريد تسجيل يوم ماضٍ؟</p>
-                                        <p style={{ fontSize: '0.72rem', color: 'rgba(250,249,247,0.35)', margin: '0 0 24px' }}>يمكنك تسجيل آخر 3 أيام فقط</p>
+                                        <p style={{ fontSize: '0.87rem', color: 'rgba(250,249,247,0.6)', margin: '10px 0 6px' }}>هل تريد تسجيل أو تعديل يوم ماضٍ؟</p>
+                                        <p style={{ fontSize: '0.72rem', color: 'rgba(250,249,247,0.35)', margin: '0 0 24px' }}>يمكنك تسجيل وتعديل آخر 3 أيام فقط</p>
                                     </>
                                 )}
                                 <div style={{ display: 'flex', gap: 10 }}>
-                                    {!sabhaAlreadyLoggedWarning.done && (
-                                        <button
-                                            onClick={() => { const n = sabhaAlreadyLoggedWarning.name; setSabhaAlreadyLoggedWarning(null); sabhaLoginIntentRef.current = true; selectUser(n); }}
-                                            style={{ flex: 1, background: 'var(--sabha-blue-deep)', color: '#fff', border: 'none', borderRadius: 14, padding: '11px 14px', fontFamily: 'Rubik', fontWeight: 700, fontSize: '0.9rem', cursor: 'pointer' }}
-                                        >متابعة التسجيل</button>
-                                    )}
+                                    <button
+                                        onClick={() => { const n = sabhaAlreadyLoggedWarning.name; setSabhaAlreadyLoggedWarning(null); sabhaLoginIntentRef.current = true; selectUser(n); }}
+                                        style={{ flex: 1, background: 'var(--sabha-blue-deep)', color: '#fff', border: 'none', borderRadius: 14, padding: '11px 14px', fontFamily: 'Rubik', fontWeight: 700, fontSize: '0.9rem', cursor: 'pointer' }}
+                                    >{sabhaAlreadyLoggedWarning.done ? 'تعديل يوم' : 'متابعة التسجيل'}</button>
                                     <button
                                         onClick={() => setSabhaAlreadyLoggedWarning(null)}
                                         style={{ flex: 1, background: 'rgba(255,255,255,0.07)', color: 'rgba(250,249,247,0.75)', border: 'none', borderRadius: 14, padding: '11px 14px', fontFamily: 'Rubik', fontWeight: 700, fontSize: '0.9rem', cursor: 'pointer' }}
@@ -3574,7 +3595,7 @@
                             entries={sabhaData[sabhaLogUser] || {}}
                             db={db}
                             onClose={() => setSabhaLogUser(null)}
-                            onLogged={() => { setSabhaLogUser(null); showToast("تم التسجيل بنجاح ✓"); }}
+                            onLogged={(edited) => { setSabhaLogUser(null); showToast(edited ? "تم تعديل اليوم ✓" : "تم التسجيل بنجاح ✓"); }}
                             onComplete={(u) => { setSabhaLogUser(null); setSabhaComplete({ user: u }); }}
                         />
                     )}

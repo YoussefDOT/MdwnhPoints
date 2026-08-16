@@ -126,14 +126,6 @@
             box-shadow: 0 0 26px rgba(232, 160, 191, 0.6), inset 0 0 0 1px rgba(255, 255, 255, 0.25);
         }
 
-        /* ---- Sliding viewport / panels ---- */
-        .sabha-viewport { position: relative; width: 100%; overflow: hidden; transition: min-height .55s cubic-bezier(0.22, 1, 0.36, 1); }
-        .sabha-panel {
-            width: 100%;
-            transition: transform .55s cubic-bezier(0.22, 1, 0.36, 1), opacity .4s ease;
-            will-change: transform, opacity;
-        }
-
         /* ---- Fajr panel header ---- */
         .sabha-fajr-title {
             font-family: 'Rubik', sans-serif;
@@ -197,498 +189,132 @@
         .sabha-gender-list { animation: sabhaGenderIn .35s cubic-bezier(0.22, 1, 0.36, 1); }
 
         /* ---- Week navigation slide ---- */
-        @keyframes sabhaSlideNext { from { opacity: 0; transform: translateX(-34px); } to { opacity: 1; transform: translateX(0); } }
-        @keyframes sabhaSlidePrev { from { opacity: 0; transform: translateX(34px); } to { opacity: 1; transform: translateX(0); } }
-        .sabha-anim-next { animation: sabhaSlideNext .32s cubic-bezier(0.22, 1, 0.36, 1); }
-        .sabha-anim-prev { animation: sabhaSlidePrev .32s cubic-bezier(0.22, 1, 0.36, 1); }
 
         /* ---- Leaderboard ---- */
         .sabha-board { width: 100%; max-width: 1300px; margin: 0 auto; display: flex; flex-direction: column; gap: 12px; min-height: 60vh; }
-        /* Grid row: [avatar 40px] [name flex] [streak 46px] [dots 102px] [total 36px] [rank 26px] */
-        .sabha-row {
-            display: grid;
-            grid-template-columns: 40px minmax(0, 1fr) 46px 102px 36px 26px;
-            align-items: center;
-            gap: 8px;
-            padding: 12px 14px;
-            border-radius: 22px;
-            background: rgba(26, 26, 30, 0.6);
-            border: 1px solid rgba(255, 255, 255, 0.06);
-            transition: transform .3s ease, border-color .3s ease, box-shadow .3s ease;
-        }
-        .sabha-row:hover { transform: translateY(-2px); border-color: rgba(126, 184, 212, 0.3); }
-        .sabha-row.is-me {
-            border-color: rgba(126, 184, 212, 0.5);
-            background: linear-gradient(120deg, rgba(126, 184, 212, 0.14), rgba(26, 26, 30, 0.65));
-            box-shadow: 0 0 26px rgba(126, 184, 212, 0.18);
-            cursor: pointer;
-        }
-        /* ---- Female (pink) overrides ---- */
-        .sabha-board.females .sabha-row:hover { border-color: rgba(232, 160, 191, 0.35); }
-        .sabha-board.females .sabha-row.is-me {
-            border-color: rgba(232, 160, 191, 0.55);
-            background: linear-gradient(120deg, rgba(232, 160, 191, 0.14), rgba(26, 26, 30, 0.65));
-            box-shadow: 0 0 26px rgba(232, 160, 191, 0.2);
-        }
-        .sabha-board.females .sabha-chevron { color: var(--sabha-pink); }
-        .sabha-board.females .sabha-total { color: var(--sabha-pink); text-shadow: 0 0 12px rgba(232, 160, 191, 0.4); }
-        .sabha-board.females .sabha-day-mini i.on { background: var(--sabha-pink); box-shadow: 0 0 5px rgba(232, 160, 191, 0.6); }
-        .sabha-board.females .sabha-expand-inner::-webkit-scrollbar-thumb { background: rgba(232, 160, 191, 0.35); }
-        .sabha-board.females .sabha-streak.has-streak { color: #f4a0c8; }
-        .sabha-avatar {
-            width: 40px; height: 40px; border-radius: 50%;
-            overflow: hidden;
-            border: 2px solid rgba(255, 255, 255, 0.1);
-            background: #262626;
-        }
-        .sabha-avatar img { width: 100%; height: 100%; object-fit: cover; }
-        .sabha-streak {
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            font-weight: 900; font-size: 11px; color: rgba(250,249,247,0.3);
-            line-height: 1.3; text-align: center;
-        }
-        .sabha-streak.has-streak { color: #ffb347; }
-        .sabha-streak .s-fire { font-size: 18px; line-height: 1; filter: grayscale(1) opacity(0.3); }
-        .sabha-streak.has-streak .s-fire { filter: none; }
-        .sabha-streak .s-num { font-size: 11px; }
-        .sabha-fire-dead { filter: grayscale(1) opacity(0.35); }
-        .sabha-name {
-            font-weight: 700; font-size: 15px; color: #faf9f7;
-            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-            display: flex; align-items: center; gap: 5px;
-        }
-        .sabha-chevron { color: var(--sabha-blue); font-size: 11px; transition: transform .4s ease; flex-shrink: 0; }
-        .sabha-chevron.open { transform: rotate(180deg); }
-        .sabha-dots { display: flex; gap: 5px; align-items: center; justify-content: center; }
-        .sabha-dot {
-            width: 10px; height: 10px; border-radius: 50%;
-            background: rgba(255, 255, 255, 0.08);
-            border: 1px solid rgba(255, 255, 255, 0.12);
-            transition: all .3s ease;
-        }
-        .sabha-dot.full { background: var(--sabha-green); border-color: var(--sabha-green); box-shadow: 0 0 8px rgba(59, 185, 171, 0.6); }
-        .sabha-dot.partial { background: var(--sabha-yellow); border-color: var(--sabha-yellow); box-shadow: 0 0 8px rgba(244, 200, 43, 0.5); }
-        .sabha-total {
-            font-weight: 900; font-size: 20px;
-            color: var(--sabha-blue);
-            min-width: 30px; text-align: center; flex-shrink: 0;
-            text-shadow: 0 0 12px rgba(126, 184, 212, 0.35);
-        }
-        .sabha-rank {
-            font-weight: 900; font-size: 13px;
-            color: rgba(250, 249, 247, 0.4);
-            min-width: 20px; text-align: center; flex-shrink: 0;
-        }
-        .sabha-rank.top { color: var(--sabha-yellow); }
-
-        /* ---- My-row expandable history ---- */
-        .sabha-expand {
-            overflow: hidden;
-            max-height: 0;
-            opacity: 0;
-            transition: max-height .5s cubic-bezier(0.22, 1, 0.36, 1), opacity .4s ease, margin .4s ease;
-        }
-        .sabha-expand.open { max-height: 200px; opacity: 1; margin-top: -4px; }
-        .sabha-expand-inner { display: flex; gap: 8px; overflow-x: auto; padding: 12px 6px; }
-        .sabha-expand-inner::-webkit-scrollbar { height: 5px; }
-        .sabha-expand-inner::-webkit-scrollbar-thumb { background: rgba(126, 184, 212, 0.3); border-radius: 10px; }
-        .sabha-day {
-            flex-shrink: 0; display: flex; flex-direction: column; align-items: center; gap: 6px;
-            padding: 8px 10px; border-radius: 14px;
-            background: rgba(12, 18, 26, 0.6); border: 1px solid rgba(255, 255, 255, 0.06);
-            min-width: 58px;
-        }
-        .sabha-day-date { font-size: 10px; color: rgba(250, 249, 247, 0.55); font-weight: 700; text-align: center; line-height: 1.3; }
-        .sabha-day-pts { font-weight: 900; font-size: 16px; }
-        .sabha-day-mini { display: flex; gap: 3px; }
-        .sabha-day-mini i { width: 6px; height: 6px; border-radius: 50%; background: rgba(255, 255, 255, 0.1); display: block; }
-        .sabha-day-mini i.on { background: var(--sabha-blue); box-shadow: 0 0 5px rgba(126, 184, 212, 0.6); }
 
         .sabha-empty { text-align: center; color: rgba(250, 249, 247, 0.5); font-weight: 700; padding: 40px 0; }
 
-        /* ---- Weekly grid (members × past 7 days) — 35% larger ---- */
         .sabha-board-inner { width: 100%; max-width: 1300px; margin: 0 auto; }
-        .sabha-grid-wrap {
-            width: 100%;
-            overflow-x: auto;
-            border-radius: 0 0 20px 20px;
-            border: 1px solid rgba(126, 184, 212, 0.14);
-            border-top: none;
-            background: rgba(10, 16, 24, 0.7);
-            -webkit-overflow-scrolling: touch;
-        }
-        .sabha-grid-wrap::-webkit-scrollbar { height: 8px; }
-        .sabha-grid-wrap::-webkit-scrollbar-thumb { background: rgba(126, 184, 212, 0.35); border-radius: 10px; }
-        .sabha-grid {
-            display: grid;
-            /* name col wider (room for rank + pts), day cols 35% bigger */
-            grid-template-columns: 210px repeat(7, minmax(100px, 1fr));
-            min-width: 920px;
-        }
-        /* Navigation band sits OUTSIDE the scroll wrap so the arrows are always visible */
-        .sabha-grid-band {
-            display: flex; align-items: center; justify-content: space-between;
-            font-weight: 900; font-size: 1.05rem;
-            color: #faf9f7; padding: 9px 14px; letter-spacing: 0.5px;
-            background: var(--sabha-blue-deep);
-            border-radius: 20px 20px 0 0;
-        }
-        .sabha-week-name { flex: 1; text-align: center; }
-        .sabha-week-nav {
-            flex-shrink: 0; width: 32px; height: 32px; border-radius: 50%;
-            border: none; cursor: pointer;
-            background: rgba(255, 255, 255, 0.14); color: #faf9f7;
-            font-size: 18px; font-weight: 900; line-height: 1;
-            display: flex; align-items: center; justify-content: center;
-            transition: background .2s ease, transform .15s ease;
-        }
-        .sabha-week-nav:hover { background: rgba(255, 255, 255, 0.28); }
-        .sabha-week-nav:active { transform: scale(0.9); }
-        .sabha-board.females .sabha-week-nav { background: rgba(255, 255, 255, 0.16); }
-        .sabha-gcell {
-            display: flex; align-items: center; justify-content: center;
-            min-height: 70px; font-size: 15px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-            border-inline-start: 1px solid rgba(255, 255, 255, 0.04);
-        }
-        .sabha-gcell.head {
-            flex-direction: column; gap: 3px; padding: 10px 6px;
-            font-weight: 900; color: #faf9f7;
-            background: rgba(79, 143, 176, 0.55);
-            min-height: 56px;
-        }
-        .sabha-gcell.head .gh-day { font-size: 14px; }
-        .sabha-gcell.head .gh-num { font-size: 12px; opacity: 0.75; }
-        .gh-day-short { display: none; } /* shown only on mobile */
-        .sabha-gcell.head.today {
-            background: rgba(126, 184, 212, 0.85);
-            color: #0c1a24;
-            box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.35);
-        }
-        .sabha-gcell.head.corner {
-            position: sticky; right: 0; z-index: 4;
-            background: #0e1824; color: rgba(250,249,247,0.7); font-size: 14px; font-weight: 900;
-            min-height: 56px;
-        }
-        .sabha-gcell.name {
-            position: sticky; right: 0; z-index: 2;
-            background: #0e1824;
-            justify-content: flex-start; gap: 9px; padding: 8px 14px;
-            font-weight: 700; color: #faf9f7;
-        }
-        /* Rank badge */
-        .sabha-grank {
-            flex-shrink: 0; font-weight: 900; font-size: 12px;
-            color: rgba(250,249,247,0.3); min-width: 18px; text-align: center;
-        }
-        .sabha-grank.top1 { color: #ffd700; }
-        .sabha-grank.top2 { color: #c0c8d0; }
-        .sabha-grank.top3 { color: #cd7f32; }
-        /* Avatar with fire-badge overlay */
-        .sabha-gname-av-wrap { position: relative; flex-shrink: 0; }
-        .sabha-gname-av { width: 36px; height: 36px; border-radius: 50%; overflow: hidden; border: 1.5px solid rgba(255, 255, 255, 0.12); background: #262626; }
-        .sabha-gname-av img { width: 100%; height: 100%; object-fit: cover; }
-        .sabha-gav-badge {
-            position: absolute; bottom: -5px; left: -6px;
-            display: flex; align-items: center; gap: 1px;
-            background: rgba(12, 14, 18, 0.92); border-radius: 999px;
-            padding: 1px 4px 1px 2px; line-height: 1;
-            font-size: 10px; font-weight: 900;
-            color: rgba(250, 249, 247, 0.25);
-            border: 1px solid rgba(255,255,255,0.06);
-        }
-        .sabha-gav-badge .bf { font-size: 12px; filter: grayscale(1) opacity(0.3); }
-        .sabha-gav-badge.on { color: #ffb347; }
-        .sabha-gav-badge.on .bf { filter: none; }
-        /* Name + total pts stacked */
-        .sabha-gname-info { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
-        .sabha-gname-txt { font-size: 14px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .sabha-gname-pts { font-size: 11px; font-weight: 900; color: var(--sabha-blue); opacity: 0.85; }
-        .sabha-gcell.val { font-weight: 800; }
-        .sabha-gcell.val .gv { font-size: 15px; letter-spacing: 0.5px; }
-        /* Score-based colors — each point lights up a distinct brand color */
-        .sabha-gcell.val.p0 { background: rgba(14, 20, 30, 0.6); color: rgba(250, 249, 247, 0.3); }
-        .sabha-gcell.val.p1 { background: rgba(244, 200, 43, 0.13); color: #f4c82b; box-shadow: inset 0 0 0 1.5px rgba(244, 200, 43, 0.55); }
-        .sabha-gcell.val.p2 { background: rgba(240, 78, 58, 0.14); color: #ff8a78; box-shadow: inset 0 0 0 1.5px rgba(240, 78, 58, 0.55); }
-        .sabha-gcell.val.p3 { background: rgba(8, 111, 182, 0.20); color: #6db3e6; box-shadow: inset 0 0 0 1.5px rgba(8, 111, 182, 0.65); }
-        .sabha-gcell.val.p4 { background: rgba(59, 185, 171, 0.20); color: #5fe0cf; box-shadow: inset 0 0 0 1.5px rgba(59, 185, 171, 0.65); }
-        .sabha-gcell.val.today { outline: 1.5px solid rgba(126, 184, 212, 0.6); outline-offset: -1.5px; }
-        .sabha-gcell.name.me { background: #122030; box-shadow: inset 3px 0 0 var(--sabha-blue); }
-        .sabha-gcell.val.me.today { outline-color: rgba(126, 184, 212, 0.9); }
-        .sabha-gcell.name.me.logged-today { background: rgba(59, 185, 171, 0.13); box-shadow: inset 3px 0 0 #5fe0cf; }
-        .sabha-gcell.val.me.logged-today { box-shadow: inset 0 1.5px 0 rgba(95, 224, 207, 0.35), inset 0 -1.5px 0 rgba(95, 224, 207, 0.35); }
-        .sabha-board.females .sabha-gcell.name.me.logged-today { background: rgba(59, 185, 171, 0.13); box-shadow: inset 3px 0 0 #5fe0cf; }
-        /* female (pink) accents */
-        .sabha-board.females .sabha-grid-band { background: var(--sabha-pink-deep); }
-        .sabha-board.females .sabha-gcell.head { background: rgba(201, 110, 160, 0.45); }
-        .sabha-board.females .sabha-gcell.head.today { background: rgba(232, 160, 191, 0.85); color: #1a0c18; }
-        .sabha-board.females .sabha-gcell.name.me { background: #1e0f1c; box-shadow: inset 3px 0 0 var(--sabha-pink); }
-        .sabha-board.females .sabha-gav-badge.on { color: #f4a0c8; }
-        .sabha-board.females .sabha-gname-pts { color: var(--sabha-pink); }
-        .sabha-board.females .sabha-gcell.val.today { outline-color: rgba(232, 160, 191, 0.6); }
-        .sabha-board.females .sabha-grid-wrap { border-color: rgba(232, 160, 191, 0.14); }
-        .sabha-board.females .sabha-grid-wrap::-webkit-scrollbar-thumb { background: rgba(232, 160, 191, 0.4); }
 
-        /* ---- Floating add button ---- */
-        .sabha-fab {
-            position: fixed; bottom: 26px; left: 50%; transform: translateX(-50%);
-            z-index: 40;
+        /* ============ صحبة الفجر — النتائج (the closed round) ============
+           The event moved to the library; this is the record it left behind.
+           Everything here is read-only by construction: there is no control in
+           the markup that writes, so "locked" is not a flag anybody can flip. */
+        .sbr-moved {
             display: inline-flex; align-items: center; gap: 8px;
-            padding: 14px 28px; border-radius: 999px; border: none;
-            font-family: 'Rubik', sans-serif; font-weight: 900; font-size: 15px;
-            color: var(--sabha-ink);
+            margin: -10px 0 22px; padding: 10px 20px; border-radius: 999px;
+            font-family: 'Rubik', sans-serif; font-weight: 900; font-size: 0.86rem;
+            color: var(--sabha-ink); text-decoration: none;
             background: linear-gradient(135deg, var(--sabha-blue-soft), var(--sabha-blue));
-            box-shadow: 0 10px 30px rgba(126, 184, 212, 0.45), inset 0 0 0 1px rgba(255, 255, 255, 0.2);
-            cursor: pointer;
-            transition: box-shadow .3s ease;
-            animation: sabhaFabIn .5s cubic-bezier(0.34, 1.56, 0.64, 1);
-        }
-        .sabha-fab:hover { box-shadow: 0 16px 42px rgba(126, 184, 212, 0.65), inset 0 0 0 1px rgba(255, 255, 255, 0.25); }
-        .sabha-fab.female { background: linear-gradient(135deg, var(--sabha-pink-soft), var(--sabha-pink-deep)); box-shadow: 0 10px 30px rgba(232, 160, 191, 0.45), inset 0 0 0 1px rgba(255, 255, 255, 0.2); }
-        .sabha-fab.female:hover { box-shadow: 0 16px 42px rgba(232, 160, 191, 0.65), inset 0 0 0 1px rgba(255, 255, 255, 0.25); }
-        .sabha-fab:active { transform: translateX(-50%) scale(0.96); }
-        .sabha-fab .sabha-fab-plus { font-size: 20px; line-height: 1; }
-        @keyframes sabhaFabIn { from { opacity: 0; transform: translateX(-50%) translateY(30px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
-
-        /* ---- Shared overlay / animations ---- */
-        .sabha-overlay {
-            position: fixed; inset: 0; z-index: 250;
-            display: flex; align-items: center; justify-content: center;
-            padding: 16px;
-            background: rgba(6, 10, 16, 0.8);
-            backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
-            animation: sabhaFade .25s ease-out;
-        }
-        @keyframes sabhaFade { from { opacity: 0; } to { opacity: 1; } }
-        @keyframes sabhaPop { from { opacity: 0; transform: translateY(20px) scale(0.96); } to { opacity: 1; transform: translateY(0) scale(1); } }
-
-        /* ---- Avatar picker popup ---- */
-        .sabha-picker {
-            position: relative;
-            width: 100%; max-width: 560px; max-height: 84vh; overflow-y: auto;
-            padding: 30px 28px;
-            border-radius: 30px;
-            background: rgba(20, 26, 34, 0.88);
-            border: 1px solid rgba(126, 184, 212, 0.22);
-            box-shadow: 0 30px 80px rgba(0, 0, 0, 0.7);
-            animation: sabhaPop .35s cubic-bezier(0.34, 1.56, 0.64, 1);
-        }
-        .sabha-picker-title { text-align: center; font-weight: 900; font-size: 1.5rem; color: var(--sabha-blue); margin-bottom: 22px; text-shadow: 0 0 18px rgba(126, 184, 212, 0.4); }
-        .sabha-pick-grid { display: flex; flex-wrap: wrap; justify-content: center; gap: 16px; }
-        .sabha-pick {
-            display: flex; flex-direction: column; align-items: center; gap: 8px;
-            background: none; border: none; cursor: pointer;
-            transition: transform .2s ease;
-        }
-        .sabha-pick:hover { transform: translateY(-4px); }
-        .sabha-pick:disabled { opacity: 0.5; }
-        .sabha-pick-av {
-            width: 72px; height: 72px; border-radius: 50%; overflow: hidden;
-            border: 3px solid rgba(255, 255, 255, 0.08); background: #262626;
-            transition: border-color .3s ease, box-shadow .3s ease;
-        }
-        .sabha-pick:hover .sabha-pick-av { border-color: var(--sabha-blue); box-shadow: 0 0 22px rgba(126, 184, 212, 0.5); }
-        .sabha-pick-av img { width: 100%; height: 100%; object-fit: cover; }
-        .sabha-pick span { font-weight: 700; font-size: 13px; color: #faf9f7; background: rgba(12, 18, 26, 0.7); padding: 4px 14px; border-radius: 999px; }
-        .sabha-close {
-            width: 40px; height: 40px; border-radius: 50%; border: none; cursor: pointer;
-            background: rgba(255, 255, 255, 0.08); color: #faf9f7; font-weight: 900; font-size: 16px;
-            transition: background .25s ease;
-        }
-        .sabha-close:hover { background: #f04e3a; }
-
-        /* ---- Daily log screen ---- */
-        .sabha-log {
-            position: fixed; inset: 0; z-index: 260;
-            display: flex; align-items: flex-start; justify-content: center;
-            overflow-y: auto; padding: 28px 16px 120px;
-            background:
-                radial-gradient(120% 80% at 50% 0%, rgba(126, 184, 212, 0.18), transparent 60%),
-                linear-gradient(180deg, #0b1622 0%, #0a1119 55%, #080d14 100%);
-            animation: sabhaSlideIn .5s cubic-bezier(0.22, 1, 0.36, 1);
-        }
-        .sabha-log.closing { animation: sabhaSlideOut .35s ease-in forwards; }
-        @keyframes sabhaSlideIn { from { opacity: 0; transform: translateX(7%); } to { opacity: 1; transform: translateX(0); } }
-        @keyframes sabhaSlideOut { from { opacity: 1; transform: translateX(0); } to { opacity: 0; transform: translateX(7%); } }
-        .sabha-log-inner { width: 100%; max-width: 540px; margin-top: 8px; }
-        .sabha-log-header { display: flex; flex-direction: column; align-items: center; gap: 12px; margin-bottom: 28px; }
-        .sabha-log-av {
-            width: 64px; height: 64px; border-radius: 50%; overflow: hidden;
-            border: 3px solid var(--sabha-blue); box-shadow: 0 0 26px rgba(126, 184, 212, 0.45);
-        }
-        .sabha-log-av img { width: 100%; height: 100%; object-fit: cover; }
-        .sabha-log-name { font-weight: 900; font-size: 1.4rem; color: #faf9f7; }
-        .sabha-log-tag { font-size: 0.9rem; color: var(--sabha-blue); font-weight: 700; }
-
-        .sabha-dates { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-bottom: 26px; }
-        .sabha-datechip {
-            display: flex; flex-direction: column; align-items: center; gap: 2px;
-            padding: 10px 16px; border-radius: 16px; cursor: pointer;
-            background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.08);
-            color: rgba(250, 249, 247, 0.7); transition: all .3s ease; min-width: 66px;
-        }
-        .sabha-datechip:hover { border-color: rgba(126, 184, 212, 0.4); }
-        .sabha-datechip.is-active {
-            background: rgba(126, 184, 212, 0.16); border-color: var(--sabha-blue); color: #faf9f7;
-            box-shadow: 0 0 18px rgba(126, 184, 212, 0.35);
-        }
-        .sabha-datechip .d-day { font-weight: 900; font-size: 14px; }
-        .sabha-datechip .d-num { font-size: 12px; opacity: 0.8; }
-        /* Already-logged day: still tappable, but marked with its saved score so it reads as "edit me" */
-        .sabha-datechip { position: relative; }
-        .sabha-datechip.is-logged { border-color: rgba(59, 185, 171, 0.35); }
-        .sabha-datechip.is-logged .d-badge {
-            position: absolute; top: -7px; inset-inline-end: -7px;
-            min-width: 19px; height: 19px; padding: 0 4px; border-radius: 10px;
-            background: #3bb9ab; color: #0b1824; font-size: 11px; font-weight: 900;
-            display: flex; align-items: center; justify-content: center;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
-        }
-        .sabha-edit-hint {
-            margin: -14px 0 20px; text-align: center;
-            font-size: 0.76rem; font-weight: 700; color: rgba(59, 185, 171, 0.85);
-        }
-
-        /* ---- Activity pills: 2×2 grid, one brand color each ---- */
-        .sabha-pills { display: grid; grid-template-columns: 1fr 1fr; gap: 13px; margin-bottom: 26px; }
-        .sabha-pill {
-            --pc: var(--sabha-blue);
-            position: relative; overflow: hidden;
-            display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
-            padding: 26px 12px; border-radius: 22px; cursor: pointer;
-            background: color-mix(in srgb, var(--pc) 7%, rgba(255, 255, 255, 0.02));
-            border: 2px solid color-mix(in srgb, var(--pc) 22%, transparent);
-            color: rgba(250, 249, 247, 0.82); font-weight: 800; font-size: 1.02rem;
-            font-family: 'Rubik', sans-serif; text-align: center; width: 100%;
-            transition: transform .2s cubic-bezier(0.34, 1.56, 0.64, 1), background .3s ease, border-color .3s ease, box-shadow .3s ease;
-        }
-        .sabha-pill:active { transform: scale(0.94); }
-        .sabha-pill-emoji { font-size: 2.1rem; line-height: 1; transition: transform .4s cubic-bezier(0.34, 1.56, 0.64, 1); }
-        .sabha-pill.on {
-            background: color-mix(in srgb, var(--pc) 24%, transparent);
-            border-color: var(--pc);
-            color: #fff;
-            box-shadow: 0 0 28px color-mix(in srgb, var(--pc) 42%, transparent), inset 0 0 0 1px color-mix(in srgb, var(--pc) 30%, transparent);
-            transform: translateY(-3px);
-        }
-        .sabha-pill.on:active { transform: scale(0.94); }
-        .sabha-pill.on .sabha-pill-emoji { transform: scale(1.28) rotate(-7deg); }
-        .sabha-pill-check {
-            position: absolute; top: 9px; inset-inline-start: 9px;
-            width: 23px; height: 23px; border-radius: 50%;
-            background: var(--pc); color: #fff; font-weight: 900; font-size: 13px;
-            display: flex; align-items: center; justify-content: center;
-            opacity: 0; transform: scale(0.3);
-            transition: all .3s cubic-bezier(0.34, 1.56, 0.64, 1);
-        }
-        .sabha-pill.on .sabha-pill-check { opacity: 1; transform: scale(1); }
-
-        /* ---- Rules note: small muted text under the back button ---- */
-        .sabha-rules-note {
-            margin-top: 18px; text-align: center; padding: 0 6px;
-            font-size: 0.7rem; line-height: 2; color: rgba(250, 249, 247, 0.38);
-        }
-
-        .sabha-submit {
-            width: 100%; padding: 18px; border-radius: 18px; border: none; cursor: pointer;
-            font-family: 'Rubik', sans-serif; font-weight: 900; font-size: 1.2rem; color: var(--sabha-ink);
-            background: linear-gradient(135deg, var(--sabha-blue-soft), var(--sabha-blue));
-            box-shadow: 0 12px 30px rgba(126, 184, 212, 0.4);
+            box-shadow: 0 10px 30px rgba(126, 184, 212, 0.4);
             transition: transform .25s ease, box-shadow .3s ease;
-            display: flex; align-items: center; justify-content: center; gap: 8px;
         }
-        .sabha-submit:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 18px 44px rgba(126, 184, 212, 0.55); }
-        .sabha-submit:disabled { opacity: 0.45; cursor: not-allowed; background: #2a2f36; color: rgba(250, 249, 247, 0.4); box-shadow: none; }
-        .sabha-back {
-            width: 100%; padding: 14px; margin-top: 12px; border-radius: 16px; cursor: pointer;
-            background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.08);
-            color: rgba(250, 249, 247, 0.7); font-weight: 700; font-family: 'Rubik', sans-serif;
-            transition: all .25s ease;
-        }
-        .sabha-back:hover { background: rgba(255, 255, 255, 0.1); color: #faf9f7; }
+        .sbr-moved:hover { transform: translateY(-2px); box-shadow: 0 16px 40px rgba(126, 184, 212, 0.55); }
 
-        /* ---- 4/4 completion popup ---- */
-        .sabha-complete {
-            position: fixed; inset: 0; z-index: 340;
-            display: flex; align-items: center; justify-content: center; padding: 20px;
-            background: radial-gradient(circle at 50% 40%, rgba(20, 40, 58, 0.92), rgba(4, 8, 12, 0.97));
-            backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
-            animation: sabhaFade .4s ease-out;
+        /* ---- the podium: second, FIRST, third ---- */
+        .sbr-podium {
+            display: flex; align-items: flex-end; justify-content: center;
+            gap: 14px; margin-bottom: 26px; flex-wrap: nowrap;
         }
-        .sabha-complete-card {
-            text-align: center; max-width: 380px; padding: 46px 32px;
-            border-radius: 32px;
-            background: rgba(16, 24, 34, 0.7);
-            border: 1px solid rgba(126, 184, 212, 0.25);
-            box-shadow: 0 30px 90px rgba(0, 0, 0, 0.6);
-            animation: sabhaPop .5s cubic-bezier(0.34, 1.56, 0.64, 1);
+        .sbr-p {
+            display: flex; flex-direction: column; align-items: center; gap: 5px;
+            flex: 0 1 auto; min-width: 0; padding: 16px 12px 14px;
+            border-radius: 24px;
+            background: rgba(26, 26, 30, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.07);
         }
-        .sabha-complete-ring { width: 100px; height: 100px; border-radius: 50%; margin: 0 auto 26px; position: relative; padding: 5px; }
-        .sabha-complete-ring::before {
-            content: ''; position: absolute; inset: -6px; border-radius: 50%;
-            background: conic-gradient(from 0deg, #7EB8D4, #b9e0f0, #7EB8D4, #4f8fb0, #7EB8D4);
-            animation: spin 5s linear infinite; opacity: 0.85; filter: blur(1px);
+        .sbr-p.place-1 {
+            padding: 22px 18px 18px;
+            border-color: rgba(244, 200, 43, 0.45);
+            background: linear-gradient(160deg, rgba(244, 200, 43, 0.14), rgba(26, 26, 30, 0.7));
+            box-shadow: 0 0 34px rgba(244, 200, 43, 0.22);
         }
-        .sabha-ring-inner {
-            position: relative; width: 100%; height: 100%; border-radius: 50%; overflow: hidden;
-            border: 3px solid #0c1a24; background: #262626;
+        .sbr-p.is-me { outline: 2px solid var(--sabha-blue); outline-offset: 2px; }
+        .sbr-crown { font-size: 1.3rem; line-height: 1; }
+        .sbr-p.place-1 .sbr-crown { font-size: 1.9rem; }
+        .sbr-p-av {
+            width: 68px; height: 68px; border-radius: 50%; overflow: hidden;
+            border: 3px solid rgba(255, 255, 255, 0.12); background: #262626;
         }
-        .sabha-ring-inner img { width: 100%; height: 100%; object-fit: cover; }
-        .sabha-complete-title { font-weight: 900; font-size: 2rem; color: #fff; margin-bottom: 8px; text-shadow: 0 0 24px rgba(126, 184, 212, 0.5); }
-        .sabha-complete-sub { color: var(--sabha-blue); font-weight: 700; font-size: 1.05rem; margin-bottom: 22px; }
-        .sabha-shimmer {
-            height: 2px; width: 70%; margin: 0 auto 28px;
-            background: linear-gradient(90deg, transparent, rgba(126, 184, 212, 0.85), transparent);
-            background-size: 200% 100%;
-            animation: sabhaShimmer 2.5s linear infinite;
+        .sbr-p.place-1 .sbr-p-av { width: 96px; height: 96px; border-color: #f4c82b; box-shadow: 0 0 26px rgba(244, 200, 43, 0.45); }
+        .sbr-p-av img { width: 100%; height: 100%; object-fit: cover; }
+        .sbr-p-name { font-weight: 800; font-size: 0.86rem; color: #faf9f7; text-align: center; }
+        .sbr-p.place-1 .sbr-p-name { font-size: 1.05rem; font-weight: 900; }
+        .sbr-p-pts { font-weight: 900; font-size: 1.35rem; color: var(--sabha-blue); text-shadow: 0 0 14px rgba(126, 184, 212, 0.4); }
+        .sbr-p.place-1 .sbr-p-pts { font-size: 1.85rem; color: #f4c82b; text-shadow: 0 0 18px rgba(244, 200, 43, 0.5); }
+        .sbr-p-days { font-size: 0.68rem; font-weight: 700; color: rgba(250, 249, 247, 0.45); }
+        .sabha-board.females .sbr-p-pts { color: var(--sabha-pink); }
+        .sabha-board.females .sbr-p.place-1 .sbr-p-pts { color: #f4c82b; }
+
+        /* ---- everyone else who submitted ---- */
+        .sbr-list { display: flex; flex-direction: column; gap: 8px; }
+        .sbr-row {
+            display: flex; align-items: center; gap: 10px;
+            padding: 9px 12px; border-radius: 18px;
+            background: rgba(26, 26, 30, 0.55);
+            border: 1px solid rgba(255, 255, 255, 0.06);
         }
-        @keyframes sabhaShimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
-        .sabha-complete-btn {
-            padding: 14px 42px; border-radius: 999px; border: none; cursor: pointer;
-            font-family: 'Rubik', sans-serif; font-weight: 900; font-size: 1.1rem; color: var(--sabha-ink);
-            background: linear-gradient(135deg, var(--sabha-blue-soft), var(--sabha-blue));
-            box-shadow: 0 10px 30px rgba(126, 184, 212, 0.45);
-            transition: transform .25s ease;
+        .sbr-row.is-me { border-color: rgba(126, 184, 212, 0.5); background: linear-gradient(120deg, rgba(126, 184, 212, 0.14), rgba(26, 26, 30, 0.65)); }
+        .sabha-board.females .sbr-row.is-me { border-color: rgba(232, 160, 191, 0.55); background: linear-gradient(120deg, rgba(232, 160, 191, 0.14), rgba(26, 26, 30, 0.65)); }
+        .sbr-rank { flex: 0 0 auto; min-width: 20px; text-align: center; font-weight: 900; font-size: 0.8rem; color: rgba(250, 249, 247, 0.35); }
+        .sbr-av { flex: 0 0 auto; width: 38px; height: 38px; border-radius: 50%; overflow: hidden; border: 2px solid rgba(255, 255, 255, 0.1); background: #262626; }
+        .sbr-av img { width: 100%; height: 100%; object-fit: cover; }
+        .sbr-who { display: flex; flex-direction: column; gap: 1px; min-width: 0; flex: 1; }
+        .sbr-who b { font-size: 0.9rem; font-weight: 800; color: #faf9f7; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .sbr-who span { font-size: 0.68rem; font-weight: 700; color: rgba(250, 249, 247, 0.45); }
+        .sbr-pts { flex: 0 0 auto; font-weight: 900; font-size: 1.15rem; color: var(--sabha-blue); }
+        .sabha-board.females .sbr-pts { color: var(--sabha-pink); }
+
+        /* ---- الإخوة × الأخوات ---- */
+        .sbr-vs { margin-top: 26px; }
+        .sbr-vs-hd { text-align: center; font-weight: 900; font-size: 1rem; color: #faf9f7; margin-bottom: 14px; }
+        .sbr-vs-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .sbr-vs-side {
+            display: flex; flex-direction: column; align-items: center; gap: 3px;
+            padding: 18px 12px; border-radius: 22px;
+            background: rgba(126, 184, 212, 0.07);
+            border: 2px solid rgba(126, 184, 212, 0.18);
         }
-        .sabha-complete-btn:hover { transform: translateY(-2px) scale(1.03); }
+        .sbr-vs-side.pink { background: rgba(232, 160, 191, 0.07); border-color: rgba(232, 160, 191, 0.2); }
+        .sbr-vs-side.win { border-color: var(--sabha-blue); box-shadow: 0 0 28px rgba(126, 184, 212, 0.3); }
+        .sbr-vs-side.pink.win { border-color: var(--sabha-pink); box-shadow: 0 0 28px rgba(232, 160, 191, 0.32); }
+        .sbr-vs-nm { font-weight: 900; font-size: 0.92rem; color: #faf9f7; }
+        .sbr-vs-big { font-weight: 900; font-size: 2rem; line-height: 1.1; color: var(--sabha-blue); }
+        .sbr-vs-side.pink .sbr-vs-big { color: var(--sabha-pink); }
+        .sbr-vs-lb { font-size: 0.68rem; font-weight: 700; color: rgba(250, 249, 247, 0.5); }
+        .sbr-vs-sm { font-size: 0.66rem; font-weight: 700; color: rgba(250, 249, 247, 0.35); margin-top: 4px; }
+        .sbr-vs-ft { text-align: center; margin-top: 12px; font-size: 0.78rem; font-weight: 700; color: rgba(250, 249, 247, 0.5); }
+
+        /* ---- أرقام الجولة ---- */
+        .sbr-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 22px; }
+        .sbr-stat {
+            display: flex; flex-direction: column; align-items: center; gap: 2px;
+            padding: 14px 8px; border-radius: 18px; text-align: center;
+            background: rgba(26, 26, 30, 0.55); border: 1px solid rgba(255, 255, 255, 0.06);
+        }
+        .sbr-stat b { font-weight: 900; font-size: 1.3rem; color: var(--sabha-blue); }
+        .sbr-stat span { font-size: 0.66rem; font-weight: 700; color: rgba(250, 249, 247, 0.45); }
+        .sbr-stat.wide { grid-column: span 2; }
+        .sbr-stat.wide b { font-size: 0.98rem; color: #faf9f7; }
+        .sabha-board.females .sbr-stat b { color: var(--sabha-pink); }
+        .sabha-board.females .sbr-stat.wide b { color: #faf9f7; }
 
         @media (max-width: 520px) {
-            .sabha-row { grid-template-columns: 36px minmax(0, 1fr) 38px 80px 30px 22px; padding: 10px 10px; gap: 5px; }
-            .sabha-dot { width: 8px; height: 8px; }
-            .sabha-dots { gap: 4px; }
-            .sabha-name { font-size: 13px; }
-            .sabha-total { font-size: 16px; }
             .sabha-tab { padding: 10px 16px; font-size: 13px; }
 
-            /* ---- Fajr grid: fit all 7 days, no horizontal scroll ---- */
-            .sabha-grid { grid-template-columns: 96px repeat(7, minmax(0, 1fr)); min-width: 0; }
-            .sabha-grid-wrap { overflow-x: hidden; border-radius: 0 0 14px 14px; }
-            .sabha-grid-band { border-radius: 14px 14px 0 0; }
-
-            /* Log screen pills */
-            .sabha-pill { padding: 22px 8px; font-size: 0.95rem; gap: 8px; border-radius: 18px; }
-            .sabha-pill-emoji { font-size: 1.9rem; }
-            .sabha-rules-note { font-size: 0.66rem; }
-            .sabha-gcell { min-height: 50px; font-size: 12px; }
-            .sabha-gcell.head { min-height: 42px; padding: 5px 1px; }
-            .sabha-gcell.head .gh-day { font-size: 13px; font-weight: 900; }
-            .sabha-gcell.head .gh-num { font-size: 8px; }
-            .gh-day-full { display: none; }
-            .gh-day-short { display: inline; }
-            .sabha-gcell.head.corner { font-size: 11px; }
-            .sabha-gcell.name { padding: 6px 7px; gap: 5px; }
-            .sabha-grank { font-size: 10px; min-width: 11px; }
-            .sabha-gname-av { width: 24px; height: 24px; }
-            .sabha-gname-txt { font-size: 11px; }
-            .sabha-gname-pts { font-size: 9px; }
-            .sabha-gav-badge { font-size: 8px; padding: 0 3px 0 1px; bottom: -4px; left: -4px; gap: 0; }
-            .sabha-gav-badge .bf { font-size: 9px; }
-            .sabha-gcell.val .gv { font-size: 14px; letter-spacing: 0; }
-            .gv-max { display: none; } /* color encodes the /4 on mobile */
-            .sabha-gcell.val.today { outline-width: 1px; outline-offset: -1px; }
-            .sabha-grid-band { font-size: 0.82rem; padding: 7px 10px; }
-            .sabha-week-name { letter-spacing: 0; }
-            .sabha-week-nav { width: 27px; height: 27px; font-size: 15px; }
+            .sbr-podium { gap: 7px; }
+            .sbr-p { padding: 12px 7px 10px; border-radius: 18px; }
+            .sbr-p.place-1 { padding: 16px 10px 12px; }
+            .sbr-p-av { width: 52px; height: 52px; }
+            .sbr-p.place-1 .sbr-p-av { width: 72px; height: 72px; }
+            .sbr-p-name { font-size: 0.72rem; }
+            .sbr-p.place-1 .sbr-p-name { font-size: 0.85rem; }
+            .sbr-p-pts { font-size: 1.1rem; }
+            .sbr-p.place-1 .sbr-p-pts { font-size: 1.5rem; }
+            .sbr-stats { grid-template-columns: repeat(2, 1fr); }
+            .sbr-stat.wide { grid-column: span 2; }
+            .sbr-vs-big { font-size: 1.6rem; }
         }
     </style>
 </head>
@@ -793,19 +419,13 @@
             });
         };
 
-        // ============ صحبة الفجر (Sabha Fajr) — helpers & components ============
+        // ============ صحبة الفجر — the closed round ============
+        // The event runs in the LIBRARY now; this page only reads the record it
+        // left behind. The day/week helpers, the four activities and the two
+        // gender rosters went with the write surfaces — the results view groups
+        // by this one set, which is also what the library keys `gender` on.
         const SABHA_FEMALE_SET = ["سحاب", "شفق", "منة", "ملك", "ورقاء", "نجود", "جمانة"];
-        const SABHA_FEMALES = MEMBERS.filter(n => SABHA_FEMALE_SET.includes(n));
-        const SABHA_MALES = ["نواف", ...MEMBERS.filter(n => !SABHA_FEMALE_SET.includes(n) && n !== "سراج")];
-        const SABHA_WEEKDAYS = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
-        const SABHA_WEEKDAYS_SHORT = ['ح', 'ن', 'ث', 'ر', 'خ', 'ج', 'س'];
-        const SABHA_MONTHS = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
-        const SABHA_ACTIVITIES = [
-            { key: 'fajr', label: 'صلاة الفجر', emoji: '🌅', color: '#f4c82b' },
-            { key: 'sleep', label: 'النوم الباكر', emoji: '🌙', color: '#086fb6' },
-            { key: 'morning', label: 'عمل صباحي', emoji: '💼', color: '#3bb9ab' },
-            { key: 'sticker', label: 'توثيق بملصق', emoji: '📸', color: '#f04e3a' }
-        ];
+
         const AVATAR_FALLBACK = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><rect fill="%23262626" width="100" height="100"/><text x="50" y="55" font-family="sans-serif" font-size="40" text-anchor="middle" fill="%23faf9f7">?</text></svg>';
         // Bump this whenever avatar files change so installed PWAs (which cache images more
         // aggressively than a plain browser tab) fetch the new file instead of a stale copy.
@@ -838,284 +458,14 @@
             }
         }, true);
 
-        const sabhaKey = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
         const toArabicNum = (n) => String(n).replace(/[0-9]/g, (d) => '٠١٢٣٤٥٦٧٨٩'[d]);
-        const sabhaStartOfToday = () => { const d = new Date(); d.setHours(0, 0, 0, 0); return d; };
 
-        // Compute total points, current streak, and the last 7 days for one user's entries
-        const computeSabhaStats = (entries) => {
-            entries = entries || {};
-            const today = sabhaStartOfToday();
-            let total = 0;
-            Object.values(entries).forEach(e => { if (e) total += (e.points || 0); });
-
-            // Streak: from yesterday backwards, consecutive days with >= 1 activity (today doesn't count)
-            let streak = 0;
-            for (let off = 1; off <= 400; off++) {
-                const d = new Date(today); d.setDate(d.getDate() - off);
-                const e = entries[sabhaKey(d)];
-                if (e && (e.points || 0) >= 1) streak++;
-                else break;
-            }
-
-            // Last 7 days: 6 days ago -> today (chronological, RTL renders newest on the right)
-            const last7 = [];
-            for (let off = 6; off >= 0; off--) {
-                const d = new Date(today); d.setDate(d.getDate() - off);
-                const e = entries[sabhaKey(d)];
-                last7.push({ key: sabhaKey(d), points: e ? (e.points || 0) : 0 });
-            }
-            return { total, streak, last7 };
-        };
-
-        // Every day from the user's first entry through today (newest first)
-        const sabhaAllDays = (entries) => {
-            entries = entries || {};
-            const today = sabhaStartOfToday();
-            const keys = Object.keys(entries).sort();
-            let start = new Date(today);
-            if (keys.length) {
-                const p = keys[0].split('-');
-                start = new Date(+p[0], +p[1] - 1, +p[2]);
-                start.setHours(0, 0, 0, 0);
-            }
-            const days = [];
-            for (let d = new Date(start); d <= today; d.setDate(d.getDate() + 1)) {
-                const k = sabhaKey(d);
-                const e = entries[k] || null;
-                days.push({ date: new Date(d), key: k, points: e ? (e.points || 0) : 0, entry: e });
-            }
-            return days.reverse();
-        };
-
-        // Past 7 days newest-first: [today, yesterday, ..., 6 days ago].
-        // In RTL the grid renders columns right→left, so index 0 (today) is the
-        // rightmost day column — immediately visible next to the sticky name column.
-        // Sunday of the week that `offset` weeks away from this week (0 = current).
-        const sabhaWeekSunday = (offset = 0) => {
-            const today = sabhaStartOfToday();
-            const sunday = new Date(today);
-            sunday.setDate(today.getDate() - today.getDay() + offset * 7);
-            return sunday;
-        };
-        // Stable Sunday→Saturday week. Index 0 = Sunday (rightmost in RTL).
-        const sabhaWeekDays = (offset = 0) => {
-            const sunday = sabhaWeekSunday(offset);
-            const todayKey = sabhaKey(sabhaStartOfToday());
-            const arr = [];
-            for (let i = 0; i <= 6; i++) {
-                const d = new Date(sunday);
-                d.setDate(sunday.getDate() + i);
-                const key = sabhaKey(d);
-                arr.push({ date: d, key, isToday: key === todayKey });
-            }
-            return arr;
-        };
-        // Label for the selected week, e.g. "31 مايو – 6 يونيو".
-        const sabhaWeekRangeLabel = (offset = 0) => {
-            const s = sabhaWeekSunday(offset);
-            const e = new Date(s); e.setDate(s.getDate() + 6);
-            return s.getMonth() === e.getMonth()
-                ? `${s.getDate()} – ${e.getDate()} ${SABHA_MONTHS[e.getMonth()]}`
-                : `${s.getDate()} ${SABHA_MONTHS[s.getMonth()]} – ${e.getDate()} ${SABHA_MONTHS[e.getMonth()]}`;
-        };
-
-        // Daily Log Screen — pick a date, toggle activities, submit to firebase
-        function SabhaLogScreen({ user, entries, db, onClose, onLogged, onComplete }) {
-            const { ref, set } = window.firebaseModular;
-            const today = sabhaStartOfToday();
-
-            // Fixed window: today + the 3 days before it. Days already logged stay in the
-            // list so they can be re-opened and edited; anything older is out of reach.
-            const candidates = [];
-            for (let off = 0; off <= 3; off++) {
-                const d = new Date(today); d.setDate(d.getDate() - off);
-                const k = sabhaKey(d);
-                candidates.push({ date: d, key: k, entry: (entries && entries[k]) || null });
-            }
-            const pillsOf = (entry) => ({
-                fajr: !!(entry && entry.fajr), sleep: !!(entry && entry.sleep),
-                morning: !!(entry && entry.morning), sticker: !!(entry && entry.sticker)
-            });
-
-            // Land on the first day that still needs logging; if all four are done, open today for editing.
-            const firstOpen = candidates.find(c => !c.entry) || candidates[0];
-            const [selectedKey, setSelectedKey] = useState(firstOpen.key);
-            const [pills, setPills] = useState(pillsOf(firstOpen.entry));
-            const [submitting, setSubmitting] = useState(false);
-            const [closing, setClosing] = useState(false);
-            const soundsRef = useRef([]);
-
-            // Preload escalation sounds 1..4 (silent if the folder/files don't exist)
-            useEffect(() => {
-                const arr = [];
-                for (let i = 1; i <= 4; i++) {
-                    try {
-                        const a = new Audio(`./sounds/Suhba/${i}.mp3`);
-                        a.preload = 'auto';
-                        a.onerror = () => {};
-                        arr.push(a);
-                    } catch (e) { arr.push(null); }
-                }
-                soundsRef.current = arr;
-            }, []);
-
-            // Play sound N (1..4). Stops anything already playing so sounds don't overlap.
-            const playSound = (n) => {
-                if (n < 1 || n > 4) return;
-                try {
-                    const base = soundsRef.current[n - 1];
-                    const a = (base && base.cloneNode) ? base.cloneNode() : new Audio(`./sounds/Suhba/${n}.mp3`);
-                    a.volume = 0.6;
-                    a.play().catch(() => {});
-                } catch (e) {}
-            };
-
-            // Burst of confetti at a screen point, tinted to the pill's color.
-            const fireConfetti = (x, y, color) => {
-                if (typeof confetti !== 'function') return;
-                confetti({
-                    particleCount: 40,
-                    spread: 65,
-                    startVelocity: 30,
-                    gravity: 0.95,
-                    scalar: 0.85,
-                    ticks: 90,
-                    origin: { x: x / window.innerWidth, y: y / window.innerHeight },
-                    colors: [color, '#ffffff', '#faf9f7'],
-                    disableForReducedMotion: true,
-                    zIndex: 9999
-                });
-            };
-
-            const togglePill = (key, color, ev) => {
-                const turningOn = !pills[key];
-                if (turningOn) {
-                    // sound is based on how many were ALREADY selected before this one:
-                    // 0 selected -> 1.mp3, 1 selected -> 2.mp3, ... (= the new total)
-                    const cur = (pills.fajr ? 1 : 0) + (pills.sleep ? 1 : 0) + (pills.morning ? 1 : 0) + (pills.sticker ? 1 : 0);
-                    playSound(cur + 1);
-                    if (ev && ev.currentTarget) {
-                        const r = ev.currentTarget.getBoundingClientRect();
-                        fireConfetti(r.left + r.width / 2, r.top + r.height / 2, color);
-                    }
-                }
-                setPills(prev => ({ ...prev, [key]: !prev[key] }));
-            };
-
-            // Switching days loads that day's saved state, so a logged day opens ready to edit.
-            const changeDate = (k) => {
-                const c = candidates.find(x => x.key === k);
-                setSelectedKey(k);
-                setPills(pillsOf(c && c.entry));
-            };
-
-            const count = (pills.fajr ? 1 : 0) + (pills.sleep ? 1 : 0) + (pills.morning ? 1 : 0) + (pills.sticker ? 1 : 0);
-            const requestClose = (cb) => { setClosing(true); setTimeout(cb, 330); };
-
-            const selected = candidates.find(c => c.key === selectedKey) || candidates[0];
-            const editing = !!(selected && selected.entry);
-            const wasComplete = !!(selected && selected.entry && (selected.entry.points || 0) === 4);
-
-            const submit = async () => {
-                if (count === 0 || submitting) return;
-                setSubmitting(true);
-                try {
-                    const payload = {
-                        fajr: pills.fajr, sleep: pills.sleep, morning: pills.morning, sticker: pills.sticker,
-                        points: count, timestamp: Date.now()
-                    };
-                    await set(ref(db, `sabha_fajr/${user}/${selectedKey}`), payload);
-                    try { const a = new Audio('./sounds/Suhba/اكمال.mp3'); a.volume = 0.7; a.play().catch(() => {}); } catch (e) {}
-                    // Celebrate a fresh 4/4 only — re-saving an already-complete day stays quiet.
-                    if (count === 4 && !wasComplete) requestClose(() => onComplete(user));
-                    else requestClose(() => onLogged(editing));
-                } catch (e) {
-                    alert('تعذر التسجيل: ' + e.message);
-                    setSubmitting(false);
-                }
-            };
-
-            return (
-                <div className={`sabha-log ${closing ? 'closing' : ''}`}>
-                    <div className="sabha-log-inner">
-                        <div className="sabha-log-header">
-                            <div className="sabha-log-av">
-                                <img src={avatarSrc(user)} alt={user} onError={(e) => { e.target.src = AVATAR_FALLBACK; }} />
-                            </div>
-                            <div className="sabha-log-name">{user}</div>
-                            <div className="sabha-log-tag">{editing ? 'عدّل يومك ✎' : 'سجّل يومك ✦'}</div>
-                        </div>
-
-                        <div className="sabha-dates">
-                            {candidates.map(c => {
-                                const isToday = c.key === sabhaKey(today);
-                                return (
-                                    <button
-                                        key={c.key}
-                                        onClick={() => changeDate(c.key)}
-                                        className={`sabha-datechip ${selectedKey === c.key ? 'is-active' : ''} ${c.entry ? 'is-logged' : ''}`}
-                                    >
-                                        {c.entry && <span className="d-badge">{toArabicNum(c.entry.points || 0)}</span>}
-                                        <span className="d-day">{isToday ? 'اليوم' : SABHA_WEEKDAYS[c.date.getDay()]}</span>
-                                        <span className="d-num">{toArabicNum(c.date.getDate())}</span>
-                                    </button>
-                                );
-                            })}
-                        </div>
-
-                        {editing && <p className="sabha-edit-hint">أنت تعدّل يومًا سجّلته سابقًا — عدّل البنود ثم احفظ</p>}
-
-                        <div className="sabha-pills">
-                            {SABHA_ACTIVITIES.map(a => (
-                                <button
-                                    key={a.key}
-                                    onClick={(ev) => togglePill(a.key, a.color, ev)}
-                                    className={`sabha-pill ${pills[a.key] ? 'on' : ''}`}
-                                    style={{ '--pc': a.color }}
-                                >
-                                    <span className="sabha-pill-emoji">{a.emoji}</span>
-                                    <span className="sabha-pill-label">{a.label}</span>
-                                    <span className="sabha-pill-check">✓</span>
-                                </button>
-                            ))}
-                        </div>
-
-                        <button className="sabha-submit" onClick={submit} disabled={count === 0 || submitting}>
-                            {submitting ? <div className="loader"></div> : (editing ? <>احفظ التعديل ✓</> : <>سجّل ✓</>)}
-                        </button>
-                        <button className="sabha-back" onClick={() => requestClose(onClose)}>رجوع</button>
-                        <p className="sabha-rules-note">
-                            اليوم فيه ٤ نقاط، كل بند نقطة:<br />
-                            🌙 النوم الباكر «قبل ١٢ص»<br />
-                            🌅 صلاة الفجر «قبل الشروق»<br />
-                            💼 عمل الصباح «مدونة، تدريب، مذاكرة»<br />
-                            📌 التوثيق بملصق «روم توثيق الروتين»
-                        </p>
-                    </div>
-                </div>
-            );
-        }
-
-        // 4/4 completion popup — celebratory but calm
-        function SabhaCompletionPopup({ user, onClose }) {
-
-            return (
-                <div className="sabha-complete">
-                    <div className="sabha-complete-card">
-                        <div className="sabha-complete-ring">
-                            <div className="sabha-ring-inner">
-                                <img src={avatarSrc(user)} alt={user} onError={(e) => { e.target.src = AVATAR_FALLBACK; }} />
-                            </div>
-                        </div>
-                        <h2 className="sabha-complete-title">جزيتم خيرًا!</h2>
-                        <p className="sabha-complete-sub">4/4 — {user}</p>
-                        <div className="sabha-shimmer"></div>
-                        <button className="sabha-complete-btn" onClick={onClose}>تابع</button>
-                    </div>
-                </div>
-            );
-        }
+        // The daily-log screen and its 4/4 popup used to live here. صحبة الفجر
+        // moved to the LIBRARY (mdwnstudio.github.io/MdwnhLibrary) — logging a
+        // day there is two taps from the task list instead of a second site and
+        // a password, which is the whole reason nobody was logging days here.
+        // This page keeps the DATA and shows the result; it no longer writes to
+        // sabha_fajr at all. See git history for the removed components.
 
         function App() {
             const [db, setDb] = useState(null);
@@ -1227,33 +577,16 @@
             const [showPasswordPrompt, setShowPasswordPrompt] = useState(false);
 
             // صحبة الفجر state
-            const [mainTab, setMainTab] = useState('points'); // 'points' | 'fajr'
-            const [sabhaGender, setSabhaGender] = useState('males'); // 'males' | 'females'
             const [sabhaData, setSabhaData] = useState({});
             const [leaderboardView, setLeaderboardView] = useState('tier'); // 'tier' | 'all'
             const [viewedTier, setViewedTier] = useState(null); // null = user's own tier
-            const [showSabhaPicker, setShowSabhaPicker] = useState(false);
-            const [sabhaLogUser, setSabhaLogUser] = useState(null);
-            const [sabhaAlreadyLoggedWarning, setSabhaAlreadyLoggedWarning] = useState(null); // name | null
-            const [sabhaWeekOffset, setSabhaWeekOffset] = useState(0); // 0 = current week, -1 = previous, +1 = next
-            const [sabhaAnim, setSabhaAnim] = useState('gender'); // 'gender' | 'next' | 'prev' — drives the board transition
-
-            // Days a member can still log within the fixed window (today + the 3 prior days).
-            const sabhaLoggableCount = (name) => {
-                const ent = sabhaData[name] || {};
-                const t = sabhaStartOfToday();
-                let c = 0;
-                for (let off = 0; off <= 3; off++) {
-                    const d = new Date(t); d.setDate(t.getDate() - off);
-                    if (!ent[sabhaKey(d)]) c++;
-                }
-                return c;
-            };
-            const [sabhaComplete, setSabhaComplete] = useState(null); // { user } | null
-            const [expandedSabhaRow, setExpandedSabhaRow] = useState(false);
+            // Which slice of the closed round the results view is showing.
+            // Three, not two: «الكل» is the one ranking that answers "who won
+            // صحبة الفجر", and the two gender tabs are what the members
+            // actually compare themselves inside.
+            const [sabhaTab, setSabhaTab] = useState('all'); // 'all' | 'males' | 'females'
             const [sabhaMe, setSabhaMe] = useState(null);
             const [userTab, setUserTab] = useState('points'); // 'points' | 'fajr'
-            const sabhaLoginIntentRef = useRef(false); // synchronous flag: login is for the Fajr daily log
             const prevUserTierRef = useRef(null);
             const prevUserPointsRef = useRef(null);
             const prevUserNameRef = useRef(null);
@@ -1490,19 +823,6 @@
             };
 
             const finishMemberLogin = (name) => {
-                // صحبة الفجر: the same password flow, but land on the daily log instead of the points page
-                if (sabhaLoginIntentRef.current) {
-                    sabhaLoginIntentRef.current = false;
-                    setSabhaMe(name);
-                    try { localStorage.setItem('sabha_me', name); } catch (e) {}
-                    setShowSabhaPicker(false);
-                    setSabhaLogUser(name);
-                    setPendingUser(null);
-                    setMemberPasswordMode(null);
-                    setMemberPasswordInput("");
-                    setMemberPasswordError("");
-                    return;
-                }
                 setCurrentUser(name);
                 setSabhaMe(name);
                 if (name === "نواف") setUserTab('fajr');
@@ -2122,90 +1442,193 @@
                 </div>
             );
 
-            const renderSabhaGrid = () => (
-                <div className="flex flex-col items-center w-full">
-                    <h2 className={`sabha-fajr-title ${sabhaGender === 'females' ? 'female' : ''}`}>صحبة الفجر</h2>
-                    <div className="sabha-subtabs">
-                        <button className={`sabha-subtab ${sabhaGender === 'males' ? 'is-active' : ''}`} onClick={() => { setSabhaAnim('gender'); setSabhaGender('males'); setExpandedSabhaRow(false); }}>الإخوة</button>
-                        <button className={`sabha-subtab ${sabhaGender === 'females' ? 'is-active female' : ''}`} onClick={() => { setSabhaAnim('gender'); setSabhaGender('females'); setExpandedSabhaRow(false); }}>الأخوات</button>
-                    </div>
-                    <div className={`sabha-board ${sabhaGender === 'females' ? 'females' : ''}`}>
-                        {(() => {
-                            const week = sabhaWeekDays(sabhaWeekOffset);
-                            const todayKey = sabhaKey(sabhaStartOfToday());
-                            const list = (sabhaGender === 'males' ? SABHA_MALES : SABHA_FEMALES)
-                                .filter(n => n !== 'سراج')
-                                .map(name => {
-                                    const entries = sabhaData[name] || {};
-                                    return { name, entries, ...computeSabhaStats(entries) };
-                                })
-                                .sort((a, b) => b.total - a.total);
-                            if (list.length === 0) return <div key={sabhaGender} className="sabha-empty sabha-gender-list">لا يوجد بيانات بعد...</div>;
-                            const animClass = sabhaAnim === 'gender' ? 'sabha-gender-list' : sabhaAnim === 'next' ? 'sabha-anim-next' : 'sabha-anim-prev';
-                            return (
-                                <div key={`${sabhaGender}-${sabhaWeekOffset}`} className={`sabha-board-inner ${animClass}`}>
-                                    <div className="sabha-grid-band">
-                                        <button className="sabha-week-nav" onClick={() => { setSabhaAnim('prev'); setSabhaWeekOffset(o => o - 1); }} aria-label="الأسبوع السابق">‹</button>
-                                        <span className="sabha-week-name">{sabhaWeekRangeLabel(sabhaWeekOffset)}</span>
-                                        <button className="sabha-week-nav" onClick={() => { setSabhaAnim('next'); setSabhaWeekOffset(o => o + 1); }} aria-label="الأسبوع التالي">›</button>
-                                    </div>
-                                    <div className="sabha-grid-wrap">
-                                        <div className="sabha-grid">
-                                        <div className="sabha-gcell head corner">المبدعون</div>
-                                        {week.map(d => (
-                                            <div key={d.key} className={`sabha-gcell head day ${d.isToday ? 'today' : ''}`}>
-                                                <span className="gh-day">
-                                                    <span className="gh-day-full">{SABHA_WEEKDAYS[d.date.getDay()]}</span>
-                                                    <span className="gh-day-short">{SABHA_WEEKDAYS_SHORT[d.date.getDay()]}</span>
-                                                </span>
-                                                <span className="gh-num">{d.isToday ? 'اليوم' : `${d.date.getDate()}/${d.date.getMonth() + 1}`}</span>
-                                            </div>
-                                        ))}
-                                        {list.map((p) => {
-                                            const rankIdx = list.indexOf(p);
-                                            const isMe = p.name === sabhaMe;
-                                            const loggedToday = isMe && !!p.entries[todayKey];
+            /* ============ صحبة الفجر — النتائج ============
+               The round that ran on this site is CLOSED. صحبة الفجر moved into
+               the library, where logging a day is two taps from the task list
+               instead of a second site, a member picker and a password — which
+               is the whole reason so few days were ever logged here. Nothing on
+               this page writes to `sabha_fajr` any more; what is left is the
+               record of what happened, because deleting a leaderboard is not
+               "locking" it.
+
+               Only members who actually SUBMITTED are ranked. A roster wall
+               with two dozen zeroes in it is not a result — it is a list of
+               people who did not take part, published under a heading that
+               says they came last. */
+            const sabhaLongestRun = (keys) => {
+                const sorted = keys.slice().sort();
+                let best = 0, run = 0, prev = null;
+                sorted.forEach(k => {
+                    const p = k.split('-');
+                    const d = new Date(+p[0], +p[1] - 1, +p[2]);
+                    run = (prev && Math.round((d - prev) / 86400000) === 1) ? run + 1 : 1;
+                    prev = d;
+                    if (run > best) best = run;
+                });
+                return best;
+            };
+
+            // One pass over the whole tree, memoised: every card below reads it.
+            const sabhaResults = React.useMemo(() => {
+                const rows = [];
+                Object.keys(sabhaData || {}).forEach(name => {
+                    if (name === 'سراج') return;
+                    const ent = sabhaData[name] || {};
+                    const keys = Object.keys(ent).filter(k => ent[k] && (ent[k].points || 0) > 0);
+                    if (!keys.length) return;                    // never submitted
+                    let total = 0, fajr = 0, sleep = 0, morning = 0, sticker = 0, full = 0;
+                    keys.forEach(k => {
+                        const e = ent[k];
+                        total += e.points || 0;
+                        if (e.fajr) fajr++;
+                        if (e.sleep) sleep++;
+                        if (e.morning) morning++;
+                        if (e.sticker) sticker++;
+                        if ((e.points || 0) === 4) full++;
+                    });
+                    rows.push({
+                        name, days: keys.length, total, fajr, sleep, morning, sticker, full,
+                        run: sabhaLongestRun(keys),
+                        female: SABHA_FEMALE_SET.includes(name)
+                    });
+                });
+                return rows.sort((a, b) => b.total - a.total || b.days - a.days);
+            }, [sabhaData]);
+
+            // الإخوة vs الأخوات. The comparison is the AVERAGE per participant,
+            // never the total: one team is roughly three times the size of the
+            // other, so a total would only ever be reporting the head-count.
+            const sabhaTeam = (female) => {
+                const rs = sabhaResults.filter(r => r.female === female);
+                const sum = (f) => rs.reduce((n, r) => n + r[f], 0);
+                const n = rs.length;
+                return {
+                    n, total: sum('total'), fajr: sum('fajr'), days: sum('days'), full: sum('full'),
+                    avg: n ? sum('total') / n : 0,
+                    fajrAvg: n ? sum('fajr') / n : 0
+                };
+            };
+
+            const renderSabhaGrid = () => {
+                const males = sabhaTeam(false), females = sabhaTeam(true);
+                const shown = sabhaTab === 'all' ? sabhaResults
+                    : sabhaResults.filter(r => r.female === (sabhaTab === 'females'));
+                const podium = shown.slice(0, 3);
+                const rest = shown.slice(3);
+                const pink = sabhaTab === 'females';
+                const winner = males.avg === females.avg ? null : (males.avg > females.avg ? 'males' : 'females');
+                const totalDays = sabhaResults.reduce((n, r) => n + r.days, 0);
+                const totalFull = sabhaResults.reduce((n, r) => n + r.full, 0);
+                const bestRun = sabhaResults.slice().sort((a, b) => b.run - a.run)[0];
+                const bestFajr = sabhaResults.slice().sort((a, b) => b.fajr - a.fajr)[0];
+                // podium order on screen: 2nd, 1st, 3rd — the tall one in the middle
+                const order = podium.length === 3 ? [podium[1], podium[0], podium[2]]
+                    : podium.length === 2 ? [podium[1], podium[0]] : podium;
+
+                return (
+                    <div className="flex flex-col items-center w-full">
+                        <h2 className={`sabha-fajr-title ${pink ? 'female' : ''}`}>صحبة الفجر</h2>
+                        <p className="sabha-fajr-sub">نتائج الجولة الماضية — انتقلت صحبة الفجر إلى المكتبة</p>
+
+                        <a className="sbr-moved" href="https://mdwnstudio.github.io/MdwnhLibrary/">
+                            🌙 سجّل يومك الآن من المكتبة
+                        </a>
+
+                        <div className="sabha-subtabs">
+                            <button className={`sabha-subtab ${sabhaTab === 'all' ? 'is-active' : ''}`}
+                                    onClick={() => setSabhaTab('all')}>الكل</button>
+                            <button className={`sabha-subtab ${sabhaTab === 'males' ? 'is-active' : ''}`}
+                                    onClick={() => setSabhaTab('males')}>الإخوة</button>
+                            <button className={`sabha-subtab ${sabhaTab === 'females' ? 'is-active female' : ''}`}
+                                    onClick={() => setSabhaTab('females')}>الأخوات</button>
+                        </div>
+
+                        <div className={`sabha-board ${pink ? 'females' : ''}`} key={sabhaTab}>
+                            {shown.length === 0 ? (
+                                <div className="sabha-empty sabha-gender-list">لم يسجّل أحد في هذه الفئة.</div>
+                            ) : (
+                                <div className="sabha-board-inner sabha-gender-list">
+
+                                    {/* ---- المنصة: الثلاثة الأوائل ---- */}
+                                    <div className="sbr-podium">
+                                        {order.map((p) => {
+                                            const place = podium.indexOf(p) + 1;
                                             return (
-                                                <React.Fragment key={p.name}>
-                                                    <div className={`sabha-gcell name ${isMe ? 'me' : ''} ${loggedToday ? 'logged-today' : ''}`}>
-                                                        <span className={`sabha-grank ${rankIdx === 0 ? 'top1' : rankIdx === 1 ? 'top2' : rankIdx === 2 ? 'top3' : ''}`}>{rankIdx + 1}</span>
-                                                        <div className="sabha-gname-av-wrap">
-                                                            <div className="sabha-gname-av">
-                                                                <img src={avatarSrc(p.name)} alt={p.name} loading="lazy" onError={(e) => { e.target.src = AVATAR_FALLBACK; }} />
-                                                            </div>
-                                                            <span className={`sabha-gav-badge ${p.streak > 0 ? 'on' : ''}`}>
-                                                                <span className="bf">🔥</span>
-                                                                {p.streak > 0 && p.streak}
-                                                            </span>
-                                                        </div>
-                                                        <div className="sabha-gname-info">
-                                                            <span className="sabha-gname-txt">{p.name}</span>
-                                                            <span className="sabha-gname-pts">{p.total} نقطة</span>
-                                                        </div>
+                                                <div key={p.name} className={`sbr-p place-${place} ${p.name === sabhaMe ? 'is-me' : ''}`}>
+                                                    <span className="sbr-crown">{place === 1 ? '👑' : place === 2 ? '🥈' : '🥉'}</span>
+                                                    <div className="sbr-p-av">
+                                                        <img src={avatarSrc(p.name)} alt={p.name} loading="lazy"
+                                                             onError={(e) => { e.target.src = AVATAR_FALLBACK; }} />
                                                     </div>
-                                                    {week.map(d => {
-                                                        const e = p.entries[d.key];
-                                                        const pts = Math.max(0, Math.min(4, e ? (e.points || 0) : 0));
-                                                        return (
-                                                            <div key={d.key} className={`sabha-gcell val p${pts} ${isMe ? 'me' : ''} ${d.isToday ? 'today' : ''} ${loggedToday ? 'logged-today' : ''}`}>
-                                                                <span className="gv" dir="ltr">{pts}<span className="gv-max"> | 4</span></span>
-                                                            </div>
-                                                        );
-                                                    })}
-                                                </React.Fragment>
+                                                    <span className="sbr-p-name">{p.name}</span>
+                                                    <span className="sbr-p-pts">{toArabicNum(p.total)}</span>
+                                                    <span className="sbr-p-days">{toArabicNum(p.days)} يوم</span>
+                                                </div>
                                             );
                                         })}
-                                        </div>
                                     </div>
+
+                                    {/* ---- البقية ---- */}
+                                    {rest.length > 0 && (
+                                        <div className="sbr-list">
+                                            {rest.map((p, i) => (
+                                                <div key={p.name} className={`sbr-row ${p.name === sabhaMe ? 'is-me' : ''}`}>
+                                                    <span className="sbr-rank">{toArabicNum(i + 4)}</span>
+                                                    <div className="sbr-av">
+                                                        <img src={avatarSrc(p.name)} alt={p.name} loading="lazy"
+                                                             onError={(e) => { e.target.src = AVATAR_FALLBACK; }} />
+                                                    </div>
+                                                    <div className="sbr-who">
+                                                        <b>{p.name}</b>
+                                                        <span>{toArabicNum(p.days)} يوم · 🔥 {toArabicNum(p.run)} · 🌅 {toArabicNum(p.fajr)}</span>
+                                                    </div>
+                                                    <span className="sbr-pts">{toArabicNum(p.total)}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+
+                                    {/* ---- المواجهة: الإخوة × الأخوات ---- */}
+                                    <div className="sbr-vs">
+                                        <div className="sbr-vs-hd">من أعان رفاقه أكثر على الاستيقاظ؟</div>
+                                        <div className="sbr-vs-grid">
+                                            <div className={`sbr-vs-side ${winner === 'males' ? 'win' : ''}`}>
+                                                <span className="sbr-vs-nm">الإخوة</span>
+                                                <span className="sbr-vs-big">{toArabicNum(males.avg.toFixed(1))}</span>
+                                                <span className="sbr-vs-lb">نقطة لكل مشارك</span>
+                                                <span className="sbr-vs-sm">{toArabicNum(males.n)} مشاركًا · 🌅 {toArabicNum(males.fajr)}</span>
+                                            </div>
+                                            <div className={`sbr-vs-side pink ${winner === 'females' ? 'win' : ''}`}>
+                                                <span className="sbr-vs-nm">الأخوات</span>
+                                                <span className="sbr-vs-big">{toArabicNum(females.avg.toFixed(1))}</span>
+                                                <span className="sbr-vs-lb">نقطة لكل مشاركة</span>
+                                                <span className="sbr-vs-sm">{toArabicNum(females.n)} مشاركة · 🌅 {toArabicNum(females.fajr)}</span>
+                                            </div>
+                                        </div>
+                                        <p className="sbr-vs-ft">
+                                            {winner === null ? 'تعادل تام — الفريقان سواء.'
+                                                : winner === 'males'
+                                                    ? 'الإخوة أعلى معدّلًا لكل مشارك في هذه الجولة.'
+                                                    : 'الأخوات أعلى معدّلًا لكل مشاركة في هذه الجولة.'}
+                                        </p>
+                                    </div>
+
+                                    {/* ---- أرقام الجولة ---- */}
+                                    <div className="sbr-stats">
+                                        <div className="sbr-stat"><b>{toArabicNum(sabhaResults.length)}</b><span>مشاركًا سجّل</span></div>
+                                        <div className="sbr-stat"><b>{toArabicNum(totalDays)}</b><span>يومًا مسجّلًا</span></div>
+                                        <div className="sbr-stat"><b>{toArabicNum(totalFull)}</b><span>يوم ٤/٤ كامل</span></div>
+                                        <div className="sbr-stat"><b>{toArabicNum(males.fajr + females.fajr)}</b><span>فجرًا في وقته</span></div>
+                                        {bestRun && <div className="sbr-stat wide"><b>🔥 {bestRun.name}</b><span>أطول سلسلة — {toArabicNum(bestRun.run)} أيام متتالية</span></div>}
+                                        {bestFajr && <div className="sbr-stat wide"><b>🌅 {bestFajr.name}</b><span>أكثر من صلّى الفجر — {toArabicNum(bestFajr.fajr)} مرة</span></div>}
+                                    </div>
+
                                 </div>
-                            );
-                        })()}
+                            )}
+                        </div>
                     </div>
-                    <p style={{ marginTop: 18, fontSize: '0.76rem', color: 'rgba(250,249,247,0.3)', textAlign: 'center', lineHeight: 2 }}>
-                        🔥 الاستمرارية (streak) &nbsp;·&nbsp; النقطة = مجموع النقاط الكلي
-                    </p>
-                </div>
-            );
+                );
+            };
 
             const top3 = players.slice(0, 3);
             const activeActionUser = adminMode ? (targetUser || "اختر عضواً") : currentUser;
@@ -2262,7 +1685,7 @@
                         {/* Cross-fading background layers */}
                         <div className="sabha-bg-layer sabha-bg-points" style={{ opacity: showSelection ? 0.12 : 0 }}></div>
                         <div className="sabha-bg-layer sabha-bg-fajr" style={{ opacity: currentUser && !adminMode && userTab === 'fajr' ? 1 : 0 }}></div>
-                        <div className="sabha-bg-layer sabha-bg-female" style={{ opacity: currentUser && !adminMode && userTab === 'fajr' && sabhaGender === 'females' ? 1 : 0 }}></div>
+                        <div className="sabha-bg-layer sabha-bg-female" style={{ opacity: currentUser && !adminMode && userTab === 'fajr' && sabhaTab === 'females' ? 1 : 0 }}></div>
 
                         {showSelection && (
                             <div className="relative min-h-screen">
@@ -2393,7 +1816,7 @@
                                     <div className="flex justify-center -mt-2">
                                         <div className="sabha-tabbar">
                                             <button className={`sabha-tab points ${userTab === 'points' ? 'is-active' : ''}`} onClick={() => setUserTab('points')}>نقاط</button>
-                                            <button className={`sabha-tab fajr ${userTab === 'fajr' ? 'is-active' : ''} ${sabhaGender === 'females' ? 'female' : ''}`} onClick={() => { setUserTab('fajr'); setSabhaGender(SABHA_FEMALE_SET.includes(currentUser) ? 'females' : 'males'); }}>صحبة الفجر</button>
+                                            <button className={`sabha-tab fajr ${userTab === 'fajr' ? 'is-active' : ''} ${sabhaTab === 'females' ? 'female' : ''}`} onClick={() => { setUserTab('fajr'); setSabhaTab(SABHA_FEMALE_SET.includes(currentUser) ? 'females' : 'all'); }}>صحبة الفجر</button>
                                         </div>
                                     </div>
                                 )}
@@ -2845,7 +2268,7 @@
                                         <p className="text-carmine text-sm font-bold animate-[slideDownFade_0.2s_ease-out]">{memberPasswordError}</p>
                                     )}
                                     <div className="flex gap-3">
-                                        <button type="button" onClick={() => { sabhaLoginIntentRef.current = false; setPendingUser(null); setMemberPasswordMode(null); setMemberPasswordInput(""); setMemberPasswordError(""); }} className="flex-1 py-3 bg-darker hover:bg-raisin rounded-xl text-snow font-bold transition">إلغاء</button>
+                                        <button type="button" onClick={() => { setPendingUser(null); setMemberPasswordMode(null); setMemberPasswordInput(""); setMemberPasswordError(""); }} className="flex-1 py-3 bg-darker hover:bg-raisin rounded-xl text-snow font-bold transition">إلغاء</button>
                                         <button type="submit" disabled={isMemberPasswordLoading || !memberPasswordInput.trim()} className="flex-1 py-3 bg-verdigris hover:bg-teal-400 disabled:bg-darker disabled:text-snow/30 text-darker font-black rounded-xl transition shadow-lg">
                                             {isMemberPasswordLoading ? <div className="loader !w-5 !h-5 !border-2 !border-darker mx-auto"></div> : (memberPasswordMode === 'set' ? 'حفظ' : 'دخول')}
                                         </button>
@@ -3493,117 +2916,11 @@
                         </div>
                     )}
 
-                    {/* ============ صحبة الفجر overlays ============ */}
-
-                    {/* Floating "add my day" button (only on the Fajr leaderboard) */}
-                    {((showSelection && mainTab === 'fajr') || (currentUser && !adminMode && userTab === 'fajr')) && !sabhaLogUser && !showSabhaPicker && !sabhaComplete && !toast && (
-                        <button className={`sabha-fab ${sabhaGender === 'females' ? 'female' : ''}`} onClick={() => {
-                                            if (currentUser && !adminMode) {
-                                                // Logged-in user: go directly to log screen (handles all-done case internally)
-                                                setSabhaLogUser(currentUser);
-                                            } else {
-                                                const tk = sabhaKey(sabhaStartOfToday());
-                                                if (sabhaMe && sabhaData[sabhaMe]?.[tk]) {
-                                                    setSabhaAlreadyLoggedWarning({ name: sabhaMe, done: sabhaLoggableCount(sabhaMe) === 0 });
-                                                } else {
-                                                    setShowSabhaPicker(true);
-                                                }
-                                            }
-                                        }}>
-                            <span className="sabha-fab-plus">＋</span> إضافة يومي
-                        </button>
-                    )}
-
-                    {/* Avatar picker popup */}
-                    {showSabhaPicker && (
-                        <div className="sabha-overlay" onClick={() => setShowSabhaPicker(false)}>
-                            <div className="sabha-picker" onClick={(e) => e.stopPropagation()}>
-                                <button className="sabha-close" style={{ position: 'absolute', top: 18, left: 18 }} onClick={() => setShowSabhaPicker(false)}>✕</button>
-                                <h2 className="sabha-picker-title">من أنت؟</h2>
-                                <div className="sabha-pick-grid">
-                                    {(sabhaGender === 'males' ? SABHA_MALES : SABHA_FEMALES).map(name => (
-                                        <button
-                                            key={name}
-                                            className="sabha-pick"
-                                            disabled={isMemberPasswordLoading}
-                                            onClick={() => {
-                                                const loggable = sabhaLoggableCount(name);
-                                                const loggedToday = !!sabhaData[name]?.[sabhaKey(sabhaStartOfToday())];
-                                                setShowSabhaPicker(false);
-                                                if (loggable === 0) {
-                                                    setSabhaAlreadyLoggedWarning({ name, done: true });
-                                                } else if (loggedToday) {
-                                                    setSabhaAlreadyLoggedWarning({ name, done: false });
-                                                } else {
-                                                    sabhaLoginIntentRef.current = true;
-                                                    selectUser(name);
-                                                }
-                                            }}
-                                        >
-                                            <div className="sabha-pick-av">
-                                                <img src={avatarSrc(name)} alt={name} loading="lazy" onError={(e) => { e.target.src = AVATAR_FALLBACK; }} />
-                                            </div>
-                                            <span>{name}</span>
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Already-logged warning */}
-                    {sabhaAlreadyLoggedWarning && (
-                        <div className="sabha-overlay" onClick={() => setSabhaAlreadyLoggedWarning(null)}>
-                            <div className="sabha-picker" style={{ maxWidth: 340, padding: '36px 28px', textAlign: 'center' }} onClick={e => e.stopPropagation()}>
-                                <div style={{ fontSize: 44, marginBottom: 14 }}>{sabhaAlreadyLoggedWarning.done ? '✅' : '📅'}</div>
-                                <h3 style={{ fontWeight: 900, fontSize: '1.1rem', color: 'var(--snow)', margin: 0 }}>
-                                    {sabhaAlreadyLoggedWarning.done ? 'سجّلت كل أيامك المتاحة!' : 'سجّلت اليوم مسبقًا!'}
-                                </h3>
-                                {sabhaAlreadyLoggedWarning.done ? (
-                                    <>
-                                        <p style={{ fontSize: '0.87rem', color: 'rgba(250,249,247,0.6)', margin: '12px 0 6px' }}>لقد سجّلت اليوم وآخر 3 أيام بالكامل</p>
-                                        <p style={{ fontSize: '0.72rem', color: 'rgba(250,249,247,0.35)', margin: '0 0 24px' }}>يمكنك تعديل هذه الأيام فقط</p>
-                                    </>
-                                ) : (
-                                    <>
-                                        <p style={{ fontSize: '0.87rem', color: 'rgba(250,249,247,0.6)', margin: '10px 0 6px' }}>هل تريد تسجيل أو تعديل يوم ماضٍ؟</p>
-                                        <p style={{ fontSize: '0.72rem', color: 'rgba(250,249,247,0.35)', margin: '0 0 24px' }}>يمكنك تسجيل وتعديل آخر 3 أيام فقط</p>
-                                    </>
-                                )}
-                                <div style={{ display: 'flex', gap: 10 }}>
-                                    <button
-                                        onClick={() => { const n = sabhaAlreadyLoggedWarning.name; setSabhaAlreadyLoggedWarning(null); sabhaLoginIntentRef.current = true; selectUser(n); }}
-                                        style={{ flex: 1, background: 'var(--sabha-blue-deep)', color: '#fff', border: 'none', borderRadius: 14, padding: '11px 14px', fontFamily: 'Rubik', fontWeight: 700, fontSize: '0.9rem', cursor: 'pointer' }}
-                                    >{sabhaAlreadyLoggedWarning.done ? 'تعديل يوم' : 'متابعة التسجيل'}</button>
-                                    <button
-                                        onClick={() => setSabhaAlreadyLoggedWarning(null)}
-                                        style={{ flex: 1, background: 'rgba(255,255,255,0.07)', color: 'rgba(250,249,247,0.75)', border: 'none', borderRadius: 14, padding: '11px 14px', fontFamily: 'Rubik', fontWeight: 700, fontSize: '0.9rem', cursor: 'pointer' }}
-                                    >رجوع</button>
-                                </div>
-                                <button
-                                    onClick={() => { setSabhaAlreadyLoggedWarning(null); setSabhaMe(null); try { localStorage.removeItem('sabha_me'); } catch(e) {} setShowSabhaPicker(true); }}
-                                    style={{ marginTop: 16, background: 'none', border: 'none', color: 'rgba(250,249,247,0.3)', fontFamily: 'Rubik', fontSize: '0.75rem', cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 3 }}
-                                >لست {sabhaAlreadyLoggedWarning.name}؟</button>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Daily log screen */}
-                    {sabhaLogUser && (
-                        <SabhaLogScreen
-                            user={sabhaLogUser}
-                            entries={sabhaData[sabhaLogUser] || {}}
-                            db={db}
-                            onClose={() => setSabhaLogUser(null)}
-                            onLogged={(edited) => { setSabhaLogUser(null); showToast(edited ? "تم تعديل اليوم ✓" : "تم التسجيل بنجاح ✓"); }}
-                            onComplete={(u) => { setSabhaLogUser(null); setSabhaComplete({ user: u }); }}
-                        />
-                    )}
-
-                    {/* 4/4 completion popup */}
-                    {sabhaComplete && (
-                        <SabhaCompletionPopup user={sabhaComplete.user} onClose={() => setSabhaComplete(null)} />
-                    )}
+                    {/* صحبة الفجر — the round on THIS site is closed. The floating
+                        «إضافة يومي» button, the member picker, the already-logged
+                        warning, the daily log and the 4/4 popup were all write
+                        surfaces, and every one of them is gone: the event runs in
+                        the library now. What is left in the fajr tab is the record. */}
 
                     {/* ── Promotion Celebration Panel ── */}
                     {showPromotionModal && promotionNewTier && (

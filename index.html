@@ -402,13 +402,18 @@
             });
         };
 
-        // Zero-based place inside a shown list, ties sharing one place: 0,1,1,3 → «1 2 2 4».
-        const placesFor = (list) => {
-            let groupStart = 0;
-            return list.map((p, i) => {
-                if (i > 0 && p.points !== list[i - 1].points) groupStart = i;
-                return groupStart;
+        // Collapse a shown list into one entry per score. A tie is ONE standing on the board, so
+        // it gets one box holding every member. Boxes are then numbered 1,2,3… — the place is the
+        // box's own position, not the member count above it, so a tie never leaves a medal
+        // missing (a two-way gold is followed by silver, not bronze).
+        const groupByPoints = (list) => {
+            const groups = [];
+            list.forEach(p => {
+                const last = groups[groups.length - 1];
+                if (last && last.points === p.points) last.members.push(p);
+                else groups.push({ points: p.points, place: groups.length, members: [p] });
             });
+            return groups;
         };
 
         // Premium Audio System for Rewards
@@ -461,6 +466,46 @@
         const avatarSrc = (name) => SLUG_BY_KEY[name]
             ? `${ROSTER_BASE}/avatars/${SLUG_BY_KEY[name]}.png`
             : `./MdwnhMembers/${name}.png?v=${AVATAR_V}`;
+
+        // One box = one standing. Members tied on points share the box: a single medal, a single
+        // score, avatars clustered and names on one line — so a tie reads as one place on the
+        // board rather than two rows that only happen to hold the same number.
+        const StandingRow = ({ group, tc, currentUser, idle }) => {
+            const medals = ['🥇', '🥈', '🥉'];
+            const members = group.members;
+            const tied = members.length > 1;
+            const isMe = members.some(m => m.name === currentUser);
+            return (
+                <div className="flex items-center gap-4 px-4 py-4 rounded-2xl border-2 transition-all hover:scale-[1.01]"
+                    style={isMe ? { background: tc.bg, borderColor: tc.border } : idle}>
+                    <div className="text-3xl w-8 text-center shrink-0">
+                        {group.place < 3 ? medals[group.place] : <span className="font-black text-base" style={{ color: 'rgba(250,249,247,0.3)' }}>{group.place + 1}</span>}
+                    </div>
+                    {/* Avatar cluster — overlapped, first member on top */}
+                    <div className="flex items-center shrink-0">
+                        {members.map((m, k) => (
+                            <div key={m.name} className={`rounded-full overflow-hidden bg-raisin border-2 ${tied ? 'w-12 h-12' : 'w-14 h-14'}`}
+                                style={{ borderColor: m.name === currentUser ? tc.color : 'rgba(255,255,255,0.12)', marginInlineStart: k ? '-14px' : 0, zIndex: members.length - k }}>
+                                <img src={avatarSrc(m.name)} alt={m.name} className="w-full h-full object-cover" onError={(e) => { e.target.src = AVATAR_FALLBACK; }} />
+                            </div>
+                        ))}
+                    </div>
+                    <div className="flex-1 min-w-0 flex items-center gap-x-2 gap-y-1 flex-wrap">
+                        {members.map((m, k) => (
+                            <React.Fragment key={m.name}>
+                                {k > 0 && <span className="font-black text-snow/25">·</span>}
+                                <span className={`font-bold text-snow ${tied ? 'text-lg' : 'text-xl'}`}>{m.name}</span>
+                            </React.Fragment>
+                        ))}
+                        {tied && (
+                            <span className="text-[10px] font-black px-2 py-0.5 rounded-full whitespace-nowrap"
+                                style={{ color: tc.color, background: tc.bg, border: `1px solid ${tc.border}` }}>تعادل</span>
+                        )}
+                    </div>
+                    <span className="font-black text-3xl shrink-0" style={{ color: tc.color }}>{group.points}</span>
+                </div>
+            );
+        };
         // Layered avatar fallback (remote roster -> bundled local -> placeholder), applied to
         // every <img> at once. Runs in the document capture phase, ahead of React's own onError,
         // so we own the fallback chain.
@@ -2023,7 +2068,7 @@
                                                 {[...TIER_CONFIG].reverse().map(tc => {
                                                     const tPlayers = tieredPlayers.filter(p => p.tier === tc.level);
                                                     if (tPlayers.length === 0) return null;
-                                                    const tPlaces = placesFor(tPlayers);
+                                                    const tGroups = groupByPoints(tPlayers);
                                                     return (
                                                         <div key={tc.level}>
                                                             <div className="flex items-center gap-3 mb-3 px-1">
@@ -2033,22 +2078,10 @@
                                                                 <span className="text-xs font-bold px-2 py-0.5 rounded-full" style={{ color: tc.color, background: tc.bg, border: `1px solid ${tc.border}` }}>المستوى {tc.level}</span>
                                                             </div>
                                                             <div className="space-y-3">
-                                                                {tPlayers.map((p, i) => {
-                                                                    const medals = ['🥇', '🥈', '🥉'];
-                                                                    const place = tPlaces[i];
-                                                                    const isMe = p.name === currentUser;
-                                                                    return (
-                                                                        <div key={p.name} className="flex items-center gap-4 px-4 py-4 rounded-2xl border-2 transition-all hover:scale-[1.01]"
-                                                                            style={isMe ? { background: tc.bg, borderColor: tc.border } : { background: 'rgba(0,0,0,0.18)', borderColor: 'rgba(255,255,255,0.05)' }}>
-                                                                            <div className="text-3xl w-8 text-center shrink-0">{place < 3 ? medals[place] : <span className="font-black text-base" style={{ color: 'rgba(250,249,247,0.3)' }}>{place + 1}</span>}</div>
-                                                                            <div className="w-14 h-14 rounded-full overflow-hidden bg-raisin shrink-0 border-2" style={{ borderColor: isMe ? tc.color : 'rgba(255,255,255,0.1)' }}>
-                                                                                <img src={avatarSrc(p.name)} alt={p.name} className="w-full h-full object-cover" onError={(e) => { e.target.src = AVATAR_FALLBACK; }} />
-                                                                            </div>
-                                                                            <span className="font-bold text-xl text-snow flex-1">{p.name}</span>
-                                                                            <span className="font-black text-3xl" style={{ color: tc.color }}>{p.points}</span>
-                                                                        </div>
-                                                                    );
-                                                                })}
+                                                                {tGroups.map(g => (
+                                                                    <StandingRow key={g.members[0].name} group={g} tc={tc} currentUser={currentUser}
+                                                                        idle={{ background: 'rgba(0,0,0,0.18)', borderColor: 'rgba(255,255,255,0.05)' }} />
+                                                                ))}
                                                             </div>
                                                         </div>
                                                     );
@@ -2059,7 +2092,7 @@
                                             (() => {
                                                 const tc = TIER_CONFIG[activeTierNum - 1];
                                                 const tPlayers = tieredPlayers.filter(p => p.tier === activeTierNum);
-                                                const tPlaces = placesFor(tPlayers);
+                                                const tGroups = groupByPoints(tPlayers);
                                                 // Every tier above, not just the next one: a wide tie group can leave the
                                                 // tier directly above empty, and the target is still the player just ahead.
                                                 const above = tieredPlayers.filter(p => p.tier > activeTierNum);
@@ -2086,22 +2119,10 @@
                                                             <p className="text-center text-snow/40 font-bold py-8 text-sm">لا أحد في هذا المستوى حالياً</p>
                                                         )}
                                                         <div className="space-y-3">
-                                                            {tPlayers.map((p, i) => {
-                                                                const medals = ['🥇', '🥈', '🥉'];
-                                                                const place = tPlaces[i];
-                                                                const isMe = p.name === currentUser;
-                                                                return (
-                                                                    <div key={p.name} className="flex items-center gap-4 px-4 py-4 rounded-2xl border-2 transition-all hover:scale-[1.01]"
-                                                                        style={isMe ? { background: tc.bg, borderColor: tc.border } : { background: 'rgba(0,0,0,0.22)', borderColor: 'rgba(255,255,255,0.07)' }}>
-                                                                        <div className="text-3xl w-8 text-center shrink-0">{place < 3 ? medals[place] : <span className="font-black text-base" style={{ color: 'rgba(250,249,247,0.3)' }}>{place + 1}</span>}</div>
-                                                                        <div className="w-14 h-14 rounded-full overflow-hidden bg-raisin shrink-0 border-2" style={{ borderColor: isMe ? tc.color : 'rgba(255,255,255,0.1)' }}>
-                                                                            <img src={avatarSrc(p.name)} alt={p.name} className="w-full h-full object-cover" onError={(e) => { e.target.src = AVATAR_FALLBACK; }} />
-                                                                        </div>
-                                                                        <span className="font-bold text-xl text-snow flex-1">{p.name}</span>
-                                                                        <span className="font-black text-3xl" style={{ color: tc.color }}>{p.points}</span>
-                                                                    </div>
-                                                                );
-                                                            })}
+                                                            {tGroups.map(g => (
+                                                                <StandingRow key={g.members[0].name} group={g} tc={tc} currentUser={currentUser}
+                                                                    idle={{ background: 'rgba(0,0,0,0.22)', borderColor: 'rgba(255,255,255,0.07)' }} />
+                                                            ))}
                                                         </div>
                                                         {/* Promotion gap */}
                                                         {activeTierNum < 5 && tPlayers.length > 0 && promotionGap !== null && promotionGap > 0 && (

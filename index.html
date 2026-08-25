@@ -389,23 +389,21 @@
             { level: 5, nameAr: 'الذهبيون',  emoji: '👑', color: '#f4c82b', bg: 'rgba(244,200,43,0.13)',  border: 'rgba(244,200,43,0.55)',  glow: 'rgba(244,200,43,0.5)'  },
         ];
 
-        // Ranking is points-only: an equal score is an equal standing. A tie group takes the
-        // position of its FIRST member — for the rank number and for the tier — so two players
-        // on the same points are never split by the alphabetical order the sort fell back on.
-        // Side effect by design: a group straddling a boundary makes its tier bigger than 5,
-        // and can leave the tier below it empty. Empty tiers are skipped when rendering.
+        // Ranking is points-only: an equal score is an equal standing. A tier holds 5 SLOTS, and
+        // a slot is one score — everyone tied on it shares that single slot, however many they
+        // are. So a tie never pushes anyone down a tier: it frees a place instead. Tiers 5..2
+        // take 5 slots each; الخشبيون (tier 1) is the floor and takes whatever is left.
         const assignTiers = (sortedPlayers) => {
-            let groupStart = 0;
+            let slot = -1;
             return sortedPlayers.map((p, i) => {
-                if (i > 0 && p.points !== sortedPlayers[i - 1].points) groupStart = i;
-                return { ...p, rank: groupStart + 1, tier: Math.max(1, 5 - Math.floor(groupStart / 5)) };
+                if (i === 0 || p.points !== sortedPlayers[i - 1].points) slot++;
+                return { ...p, rank: slot + 1, tier: Math.max(1, 5 - Math.floor(slot / 5)) };
             });
         };
 
-        // Collapse a shown list into one entry per score. A tie is ONE standing on the board, so
-        // it gets one box holding every member. Boxes are then numbered 1,2,3… — the place is the
-        // box's own position, not the member count above it, so a tie never leaves a medal
-        // missing (a two-way gold is followed by silver, not bronze).
+        // Collapse a shown list into one entry per score — one slot, one box. Boxes are numbered
+        // by their own position (1, 2, 3…), so a two-way gold is followed by silver rather than
+        // leaving that medal missing.
         const groupByPoints = (list) => {
             const groups = [];
             list.forEach(p => {
@@ -467,45 +465,57 @@
             ? `${ROSTER_BASE}/avatars/${SLUG_BY_KEY[name]}.png`
             : `./MdwnhMembers/${name}.png?v=${AVATAR_V}`;
 
-        // One box = one standing. Members tied on points share the box: a single medal, a single
-        // score, avatars clustered and names on one line — so a tie reads as one place on the
-        // board rather than two rows that only happen to hold the same number.
+        // One box = one slot on the board. When several players are tied on the score, the box is
+        // SPLIT into a pane each — divider down the middle, avatar and name on either side — so
+        // the tie reads as one shared place holding two people, not as two places.
         const StandingRow = ({ group, tc, currentUser, idle }) => {
             const medals = ['🥇', '🥈', '🥉'];
             const members = group.members;
             const tied = members.length > 1;
             const isMe = members.some(m => m.name === currentUser);
+            // On a split box the tint goes on YOUR pane only — tinting the card as well would
+            // stack two washes and swallow the divider. The border still marks the box as yours.
+            const cardStyle = isMe
+                ? { background: tied ? idle.background : tc.bg, borderColor: tc.border }
+                : idle;
             return (
-                <div className="flex items-center gap-4 px-4 py-4 rounded-2xl border-2 transition-all hover:scale-[1.01]"
-                    style={isMe ? { background: tc.bg, borderColor: tc.border } : idle}>
-                    <div className="text-3xl w-8 text-center shrink-0">
+                <div className="flex items-stretch gap-3 sm:gap-4 px-3 sm:px-4 py-3 rounded-2xl border-2 transition-all hover:scale-[1.01]"
+                    style={cardStyle}>
+                    <div className="text-3xl w-8 shrink-0 flex items-center justify-center">
                         {group.place < 3 ? medals[group.place] : <span className="font-black text-base" style={{ color: 'rgba(250,249,247,0.3)' }}>{group.place + 1}</span>}
                     </div>
-                    {/* Avatar cluster — overlapped, first member on top */}
-                    <div className="flex items-center shrink-0">
-                        {members.map((m, k) => (
-                            <div key={m.name} className={`rounded-full overflow-hidden bg-raisin border-2 ${tied ? 'w-12 h-12' : 'w-14 h-14'}`}
-                                style={{ borderColor: m.name === currentUser ? tc.color : 'rgba(255,255,255,0.12)', marginInlineStart: k ? '-14px' : 0, zIndex: members.length - k }}>
-                                <img src={avatarSrc(m.name)} alt={m.name} className="w-full h-full object-cover" onError={(e) => { e.target.src = AVATAR_FALLBACK; }} />
-                            </div>
-                        ))}
+                    <div className="flex-1 min-w-0 flex items-stretch">
+                        {members.map((m, k) => {
+                            const mine = m.name === currentUser;
+                            return (
+                                <React.Fragment key={m.name}>
+                                    {k > 0 && (
+                                        <div className="w-px shrink-0 mx-2 sm:mx-3 rounded-full" style={{ background: tc.border }}></div>
+                                    )}
+                                    {/* A split pane is half a card wide, so on phones the name goes UNDER the avatar
+                                        instead of beside it — side by side it truncates to a single letter. */}
+                                    <div className={`flex-1 min-w-0 flex items-center px-1 ${tied ? 'flex-col sm:flex-row justify-center sm:justify-start gap-1 sm:gap-3' : 'gap-3'}`}>
+                                        <div className={`rounded-full overflow-hidden bg-raisin shrink-0 border-2 ${tied ? 'w-10 h-10 sm:w-11 sm:h-11' : 'w-14 h-14'}`}
+                                            style={{ borderColor: mine ? tc.color : 'rgba(255,255,255,0.12)' }}>
+                                            <img src={avatarSrc(m.name)} alt={m.name} className="w-full h-full object-cover" onError={(e) => { e.target.src = AVATAR_FALLBACK; }} />
+                                        </div>
+                                        {/* Inside a split box the tier colour on the ring and the name is the «you» cue —
+                                            a filled pane would read as a second card sitting in the same row. */}
+                                        <span className={`font-bold truncate max-w-full ${tied ? 'text-sm sm:text-lg' : 'text-xl'} ${tied && mine ? '' : 'text-snow'}`}
+                                            style={tied && mine ? { color: tc.color } : undefined}>{m.name}</span>
+                                    </div>
+                                </React.Fragment>
+                            );
+                        })}
                     </div>
-                    <div className="flex-1 min-w-0 flex items-center gap-x-2 gap-y-1 flex-wrap">
-                        {members.map((m, k) => (
-                            <React.Fragment key={m.name}>
-                                {k > 0 && <span className="font-black text-snow/25">·</span>}
-                                <span className={`font-bold text-snow ${tied ? 'text-lg' : 'text-xl'}`}>{m.name}</span>
-                            </React.Fragment>
-                        ))}
-                        {tied && (
-                            <span className="text-[10px] font-black px-2 py-0.5 rounded-full whitespace-nowrap"
-                                style={{ color: tc.color, background: tc.bg, border: `1px solid ${tc.border}` }}>تعادل</span>
-                        )}
+                    <div className="shrink-0 flex flex-col items-center justify-center leading-none">
+                        <span className={`font-black ${tied ? 'text-2xl sm:text-3xl' : 'text-3xl'}`} style={{ color: tc.color }}>{group.points}</span>
+                        {tied && <span className="text-[10px] font-black mt-1" style={{ color: tc.color, opacity: 0.7 }}>تعادل</span>}
                     </div>
-                    <span className="font-black text-3xl shrink-0" style={{ color: tc.color }}>{group.points}</span>
                 </div>
             );
         };
+
         // Layered avatar fallback (remote roster -> bundled local -> placeholder), applied to
         // every <img> at once. Runs in the document capture phase, ahead of React's own onError,
         // so we own the fallback chain.
@@ -2114,7 +2124,7 @@
                                                                 <span className="text-[11px] px-2 py-0.5 rounded-full font-black" style={{ background: tc.bg, border: `1px solid ${tc.border}`, color: tc.color }}>مستواك ✦</span>
                                                             )}
                                                         </div>
-                                                        {/* Players — a tier can now be empty when a tie group below it spilled over */}
+                                                        {/* Players — slots fill top-down so a tier only runs empty when the board is short */}
                                                         {tPlayers.length === 0 && (
                                                             <p className="text-center text-snow/40 font-bold py-8 text-sm">لا أحد في هذا المستوى حالياً</p>
                                                         )}
